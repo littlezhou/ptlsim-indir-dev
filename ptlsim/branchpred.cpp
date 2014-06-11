@@ -10,6 +10,27 @@
 
 #include <branchpred.h>
 #include <stats.h>
+                
+static const int MAX_ITERS=16;
+static const W64 vpc_constants[16]={
+	0x71e05c389a3c,
+	0xac20af7ee7ca,  
+	0x4c9d0bfadfe9,
+	0x9c5a00ad011d,
+    0x561f4945163a,
+	0xc1540b4c0803, 
+	0x17f1b69c5652,
+	0xb20fff87ef51,
+	0x3586135951a1,
+	0x19ef79810557,
+	0x8a783245abec, 
+	0x91aa64b7f410,  
+	0xb87ccca7a11b,
+	0x2194e702179d,
+	0xc9419b1819d6,
+	0x133fb4a52252,
+	
+};
 
 template <int SIZE>
 struct BimodalPredictor {
@@ -56,10 +77,11 @@ struct TwoLevelPredictor {
 
 struct BTBEntry {
   W64 target;		// last destination of branch when taken
-
+  W64 count;
   void reset() {
     target = 0;
-  }
+	count = 0;
+ }
 
   ostream& print(ostream& os, W64 tag) const {
     os << (void*)(Waddr)target;
@@ -223,7 +245,9 @@ struct CombinedPredictor {
 
   BranchTargetBuffer<BTBSETS, BTBWAYS> btb;
   ReturnAddressStack<RASSIZE> ras;
-
+   
+  
+ 
   void reset() {
     twolevel.reset();
     bimodal.reset();
@@ -291,16 +315,102 @@ struct CombinedPredictor {
 
     // if this is a jump, ignore predicted direction; we know it's taken.
     if unlikely (!(type & BRANCH_HINT_COND)) {
-      return (pbtb ? pbtb->target : target);
-    }
+        
+		return predict_indir(update,branchaddr,target);
+  	   // return (pbtb ? pbtb->target : target);
+    
+	}
 
     //
     // Predict conditional branch:
     //
     return (*(update.cp1) >= 2) ? target : branchaddr;
   }
+        
 
-  void update(PredictorUpdate& update, W64 branchaddr, W64 target) {
+  W64 predict_vpc(VPCPredictorUpdate& update, W64 branchaddr, W64 target, bool& taken, bool& btbmiss, W64& btbtarget) {
+    update.cp1 = null;
+    update.cp2 = null;
+    update.cpmeta = null;
+    
+
+   
+
+    
+      byte& bimodalctr = *bimodal.predict(branchaddr);
+      byte& twolevelctr = *twolevel.predict(branchaddr);
+      byte& metactr = *meta.predict(branchaddr);
+      update.cpmeta = &metactr;
+      update.meta  = (metactr >= 2);
+      update.bimodal = (bimodalctr >= 2);
+      update.twolevel  = (twolevelctr >= 2);
+      if (metactr >= 2) {
+        update.cp1 = &twolevelctr;
+	      update.cp2 = &bimodalctr;
+	    } else {
+	      update.cp1 = &bimodalctr;
+	      update.cp2 = &twolevelctr;
+	    }
+    
+	taken = (*(update.cp1) >= 2) ? true : false;
+    BTBEntry* pbtb = btb.probe(branchaddr);
+	if(!pbtb) { btbmiss = true; }  
+	else { btbtarget = target = pbtb->target; }
+    
+    
+    //
+    // Predict conditional branch:
+    //
+    return (*(update.cp1) >= 2) ? target : branchaddr;
+  }
+  
+  W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
+  {                        
+	         
+		update.indir = true;  
+		update.idx = -1;  
+		int last_idx = -1;
+		update.had_btb_miss = false;
+		W64 branch_targets[MAX_ITERS]={0};
+		W64 pred_target=0;  
+		W64 last_pred_target=0;  
+		bool btbmiss = false;
+		bool had_target = false;
+		int i;
+		for(i=0;i<MAX_ITERS;++i)
+		{                                            
+			W64 btbtarget = 0;
+			btbmiss = false; 
+			bool taken = false;
+			W64 baddr = (!i) ? branchaddr : branchaddr ^ vpc_constants[i];
+			pred_target = predict_vpc(update.indirs[i],baddr,target,taken,btbmiss,btbtarget); 
+			if(taken)
+			{                  
+				update.idx = i; 
+				return pred_target;
+			}
+			else
+			{
+				if(!btbmiss)
+				{   
+					had_target = true;  
+					last_pred_target = btbtarget;
+					last_idx = i; 
+				   
+				}
+				else
+				{
+					// we missed in the BTB stop and send the 
+					break;
+				}
+			}
+		} 
+		// may want to return another legit BTB target
+		return target;
+  }
+        
+
+  void update(PredictorUpdate& update, W64 branchaddr, W64 target, bool indirPredCorrect) {
     int type = update.flags;
 
     bool taken = (target != branchaddr);
@@ -310,7 +420,8 @@ struct CombinedPredictor {
     // which are returns.
     //
     if unlikely (type & BRANCH_HINT_INDIRECT) {
-      if unlikely (type & BRANCH_HINT_RET) return;
+      if unlikely (type & BRANCH_HINT_RET) return;  
+      else { return update_indir(update,branchaddr,target,indirPredCorrect); }
     }
 
     //
@@ -373,7 +484,125 @@ struct CombinedPredictor {
       pbtb->target = target;
     }
   }
+       
+  void update_indir(PredictorUpdate& update, W64 branchaddr, W64 target, bool indirPredCorrect)
+  {      
+		bool found=false; 
+		W64 least_count=0xFFFFFFFFFFFFFF;
+		W64 lru_addr = 0;
+		int lru_idx = -1;
+		W64 btb_miss_addr = 0; 
+		int idx = -1;
+		for(int i=0;i<MAX_ITERS;++i)
+		{
+	   		W64 baddr = (!i) ? branchaddr : branchaddr ^ vpc_constants[i];  
+	   		BTBEntry* pbtb = btb.probe(branchaddr);
+	 		if(!pbtb)
+	   		{
+		   	// we had a BTB miss 
+				btb_miss_addr = baddr;   
+				idx = i;
+			}
+			else
+			{        
+			   
+				if(pbtb->count < least_count)
+				{
+					least_count = pbtb->count;
+					lru_addr = baddr;
+					lru_idx = i;
+				}
+				if(pbtb->target == target && !found)
+				{
+					// reinforce as taken
+					update_vpc(update.indirs[i],baddr,target,true);     
+					found = true;
+					break;
+					// we are done
+				}   
+				else
+				{
+					update_vpc(update.indirs[i],baddr,target,false);
+				}
+			}               
+  		}
+		if(!found)
+		{
+			// we need to select a replacement, if we had a BTB miss then select 
+			// that entry
+			if(btb_miss_addr)
+			{                         
+			   btb.select(btb_miss_addr);
+			   update_vpc(update.indirs[idx],btb_miss_addr,target,true);   
+			}   
+			else 
+			{   
+			   // otherwise use the LRU  
+			   assert(lru_addr);  
+			   btb.select(lru_addr);   
+			   update_vpc(update.indirs[lru_idx],lru_addr,target,true);                     
+			}
+		}
+	}
 
+  void update_vpc(VPCPredictorUpdate& update, W64 branchaddr, W64 target, bool taken) 
+  {
+  
+    //
+    // L1 table is updated unconditionally for combining predictor too:
+    //
+   
+      int l1index = lowbits(branchaddr, log2(L1SIZE));
+      twolevel.shiftregs[l1index] = lowbits((twolevel.shiftregs[l1index] << 1) | taken, SHIFTWIDTH);
+    
+
+    //
+    // Find BTB entry if it's a taken branch (don't allocate for non-taken)
+    //
+	BTBEntry* pbtb =  btb.probe(branchaddr); 
+	assert(pbtb != null);
+	pbtb->count++;
+    //
+    // Now p is a possibly null pointer into the direction prediction table, 
+    // and pbtb is a possibly null pointer into the BTB (either to a 
+    // matched-on entry or a victim which was LRU in its set)
+    //
+
+    //
+    // update state (but not for jumps)
+    //
+    if likely (update.cp1) {
+      byte& counter = *update.cp1;
+      counter = clipto(counter + (taken ? +1 : -1), 0, 3);
+    }
+
+    //
+    // combining predictor also updates second predictor and meta predictor
+    // second direction predictor
+    //
+    if likely (update.cp2) {
+      byte& counter = *update.cp2;
+      counter = clipto(counter + (taken ? +1 : -1), 0, 3);
+    }
+
+    //
+    // Update meta predictor
+    //
+    if likely (update.cpmeta) {
+      if (update.bimodal != update.twolevel) {
+        //
+        // We only update meta predictor if directions were different.
+        // We increment the counter if the twolevel predictor was correct; 
+        // if the bimodal predictor was correct, we decrement it.
+        //
+        byte& counter = *update.cpmeta;
+        bool twolevel_or_bimodal = (update.twolevel == taken);
+        counter = clipto(counter + (twolevel_or_bimodal ? +1 : -1), 0, 3);
+      }
+    }
+    pbtb->target = target;
+    
+  }
   //
   // Speculative execution can corrupt the RAS, since entries will be pushed
   // as call insns are fetched. If those call insns were along an incorrect
@@ -412,8 +641,8 @@ W64 BranchPredictorInterface::predict(PredictorUpdate& update, int type, W64 bra
   return impl->predict(update, type, branchaddr, target);
 }
 
-void BranchPredictorInterface::update(PredictorUpdate& update, W64 branchaddr, W64 target) {
-  impl->update(update, branchaddr, target);
+void BranchPredictorInterface::update(PredictorUpdate& update, W64 branchaddr, W64 target, bool indirPredCorrect) {
+  impl->update(update, branchaddr, target, indirPredCorrect);
 }
 
 void BranchPredictorInterface::updateras(PredictorUpdate& predinfo, W64 branchaddr) {

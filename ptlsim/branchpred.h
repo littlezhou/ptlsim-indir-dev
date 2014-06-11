@@ -40,6 +40,19 @@ struct ReturnAddressStackEntry {
 
 ostream& operator <<(ostream& os, const ReturnAddressStackEntry& e);
 
+struct VPCPredictorUpdate
+{
+  W64 uuid;
+  byte* cp1;
+  byte* cp2;
+  byte* cpmeta;
+  // predicted directions:
+  W32 ctxid:8, flags:8, bimodal:1, twolevel:1, meta:1, ras_push:1;
+  ReturnAddressStackEntry ras_old; 
+	
+};  
+
+
 struct PredictorUpdate {
   W64 uuid;
   byte* cp1;
@@ -47,7 +60,11 @@ struct PredictorUpdate {
   byte* cpmeta;
   // predicted directions:
   W32 ctxid:8, flags:8, bimodal:1, twolevel:1, meta:1, ras_push:1;
-  ReturnAddressStackEntry ras_old;
+  ReturnAddressStackEntry ras_old;  
+  bool indir;
+  int idx;   
+  bool had_btb_miss;
+  struct VPCPredictorUpdate indirs[32];
 };
 
 extern W64 branchpred_ras_pushes;
@@ -67,7 +84,7 @@ struct BranchPredictorInterface {
   void reset();
   void destroy();
   W64 predict(PredictorUpdate& update, int type, W64 branchaddr, W64 target);
-  void update(PredictorUpdate& update, W64 branchaddr, W64 target);
+  void update(PredictorUpdate& update, W64 branchaddr, W64 target, bool indirPredCorrect);
   void updateras(PredictorUpdate& predinfo, W64 branchaddr);
   void annulras(const PredictorUpdate& predinfo);
   void flush();
