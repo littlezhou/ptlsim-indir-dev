@@ -18,6 +18,9 @@
 #define BRANCH_HINT_INDIRECT    (1 << 1)
 #define BRANCH_HINT_CALL        (1 << 2)
 #define BRANCH_HINT_RET         (1 << 3)
+  
+
+static const int MAX_VPC_ITERS=16;
 
 struct ReturnAddressStackEntry {
   int idx;
@@ -61,12 +64,10 @@ struct PredictorUpdate {
   // predicted directions:
   W32 ctxid:8, flags:8, bimodal:1, twolevel:1, meta:1, ras_push:1;
   ReturnAddressStackEntry ras_old;  
-  bool indir;
-  int idx;   
-  bool had_btb_miss;
-  struct VPCPredictorUpdate indirs[32];
+ 
 };
-
+    
+struct VPCPredictorUpdate indirs[192][MAX_VPC_ITERS]; 
 extern W64 branchpred_ras_pushes;
 extern W64 branchpred_ras_overflows;
 extern W64 branchpred_ras_pops;

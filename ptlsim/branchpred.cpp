@@ -11,7 +11,7 @@
 #include <branchpred.h>
 #include <stats.h>
                 
-static const int MAX_ITERS=16;
+#if 1
 static const W64 vpc_constants[16]={
 	0x71e05c389a3c,
 	0xac20af7ee7ca,  
@@ -30,7 +30,28 @@ static const W64 vpc_constants[16]={
 	0xc9419b1819d6,
 	0x133fb4a52252,
 	
+}; 
+#else
+static const W64 vpc_constants[16]={
+	0x71e05c,
+	0xac20a3,  
+	0x4c9d0b,
+	0x9c5a00,
+    0x561f49,
+	0xc1540b, 
+	0x17f1b6,
+	0xb20fff,
+	0x358613,
+	0x19ef79,
+	0x8a7832, 
+	0x91aa64,  
+	0xb87ccc,
+	0x2194e7,
+	0xc9419b,
+	0x133fb4
+	
 };
+#endif  
 
 template <int SIZE>
 struct BimodalPredictor {
@@ -328,7 +349,9 @@ struct CombinedPredictor {
   }
         
 
-  W64 predict_vpc(VPCPredictorUpdate& update, W64 branchaddr, W64 target, bool& taken, bool& btbmiss, W64& btbtarget) {
+
+W64 predict_vpc(VPCPredictorUpdate& update, W64 branchaddr, W64 target, bool& taken, bool& btbmiss, W64& btbtarget)
+{
     update.cp1 = null;
     update.cp2 = null;
     update.cpmeta = null;
@@ -361,32 +384,60 @@ struct CombinedPredictor {
     //
     // Predict conditional branch:
     //
-    return (*(update.cp1) >= 2) ? target : branchaddr;
-  }
+   //  return (*(update.cp1) >= 2) ? target : branchaddr;
+     return target;
+}          
+
+void fill_in_predict(PredictorUpdate& update, W64 branchaddr)
+{
+	 update.cp1 = null;
+    update.cp2 = null;
+    update.cpmeta = null;
+
+
+
+
+
+      byte& bimodalctr = *bimodal.predict(branchaddr);
+      byte& twolevelctr = *twolevel.predict(branchaddr);
+      byte& metactr = *meta.predict(branchaddr);
+      update.cpmeta = &metactr;
+      update.meta  = (metactr >= 2);
+      update.bimodal = (bimodalctr >= 2);
+      update.twolevel  = (twolevelctr >= 2);
+      if (metactr >= 2) {
+        update.cp1 = &twolevelctr;
+	      update.cp2 = &bimodalctr;
+	    } else {
+	      update.cp1 = &bimodalctr;
+	      update.cp2 = &twolevelctr;
+	    }
+}
   
-  W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
-  {                        
+W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
+{                        
 	         
-		update.indir = true;  
-		update.idx = -1;  
+	   
 		int last_idx = -1;
-		update.had_btb_miss = false;
-		W64 branch_targets[MAX_ITERS]={0};
+	    W64 branch_targets[MAX_VPC_ITERS]={0};
 		W64 pred_target=0;  
 		W64 last_pred_target=0;  
 		bool btbmiss = false;
 		bool had_target = false;
-		int i;
-		for(i=0;i<MAX_ITERS;++i)
+		int i;  
+	    if (logable(5)) logfile << "predict_indir. branchaddr: ", hexstring(branchaddr,48), " target: ", hexstring(target,48), endl;
+		for(i=0;i<MAX_VPC_ITERS;++i)
 		{                                            
 			W64 btbtarget = 0;
 			btbmiss = false; 
 			bool taken = false;
 			W64 baddr = (!i) ? branchaddr : branchaddr ^ vpc_constants[i];
-			pred_target = predict_vpc(update.indirs[i],baddr,target,taken,btbmiss,btbtarget); 
+			pred_target = predict_vpc(indirs[update.uuid%192][i],baddr,target,taken,btbmiss,btbtarget); 
 			if(taken)
 			{                  
-				update.idx = i; 
+			   // update.idx = i;   
+			 
+				if (logable(5)) logfile << "btbmiss: ", btbmiss, " returning pred_target: ", hexstring(pred_target,48), endl;
 				return pred_target;
 			}
 			else
@@ -405,7 +456,8 @@ struct CombinedPredictor {
 				}
 			}
 		} 
-		// may want to return another legit BTB target
+		// may want to return another legit BTB target        
+	   // logfile <<  "returning: ", target, endl;
 		return target;
   }
         
@@ -492,16 +544,20 @@ struct CombinedPredictor {
 		W64 lru_addr = 0;
 		int lru_idx = -1;
 		W64 btb_miss_addr = 0; 
-		int idx = -1;
-		for(int i=0;i<MAX_ITERS;++i)
+		int idx = -1;   
+		if (logable(5)) logfile << "branchaddr: ", hexstring(branchaddr,48), " target: ", hexstring(target,48), endl;
+		for(int i=0;i<MAX_VPC_ITERS;++i)
 		{
 	   		W64 baddr = (!i) ? branchaddr : branchaddr ^ vpc_constants[i];  
-	   		BTBEntry* pbtb = btb.probe(branchaddr);
+	   		BTBEntry* pbtb = btb.probe(baddr);
 	 		if(!pbtb)
 	   		{
-		   	// we had a BTB miss 
-				btb_miss_addr = baddr;   
-				idx = i;
+		   	// we had a BTB miss  
+			    if(!btb_miss_addr)
+				{
+					btb_miss_addr = baddr;   
+					idx = i;
+				}
 			}
 			else
 			{        
@@ -512,17 +568,18 @@ struct CombinedPredictor {
 					lru_addr = baddr;
 					lru_idx = i;
 				}
-				if(pbtb->target == target && !found)
+				if(pbtb->target == target)
 				{
-					// reinforce as taken
-					update_vpc(update.indirs[i],baddr,target,true);     
+					// reinforce as taken  
+					if (logable(5)) logfile << "reinforcing: ", hexstring(baddr,48), " with target: ", hexstring(target,48), endl;
+					update_vpc(indirs[update.uuid%192][i],baddr,target,true);     
 					found = true;
 					break;
 					// we are done
 				}   
 				else
 				{
-					update_vpc(update.indirs[i],baddr,target,false);
+					update_vpc(indirs[update.uuid%192][i],baddr,target,false);
 				}
 			}               
   		}
@@ -533,14 +590,14 @@ struct CombinedPredictor {
 			if(btb_miss_addr)
 			{                         
 			   btb.select(btb_miss_addr);
-			   update_vpc(update.indirs[idx],btb_miss_addr,target,true);   
+			   update_vpc(indirs[update.uuid%192][idx],btb_miss_addr,target,true);   
 			}   
 			else 
 			{   
 			   // otherwise use the LRU  
 			   assert(lru_addr);  
 			   btb.select(lru_addr);   
-			   update_vpc(update.indirs[lru_idx],lru_addr,target,true);                     
+			   update_vpc(indirs[update.uuid%192][lru_idx],lru_addr,target,true);                     
 			}
 		}
 	}
@@ -600,7 +657,7 @@ struct CombinedPredictor {
         counter = clipto(counter + (twolevel_or_bimodal ? +1 : -1), 0, 3);
       }
     }
-    pbtb->target = target;
+    if(taken) { pbtb->target = target; }
     
   }
   //
@@ -620,7 +677,7 @@ struct CombinedPredictor {
 
 // template <int METASIZE, int BIMODSIZE, int L1SIZE, int L2SIZE, int SHIFTWIDTH, bool HISTORYXOR, int BTBSETS, int BTBWAYS, int RASSIZE>
 // G-share constraints: METASIZE, BIMODSIZE, 1, L2SIZE, log2(L2SIZE), (HISTORYXOR = true), BTBSETS, BTBWAYS, RASSIZE
-struct BranchPredictorImplementation: public CombinedPredictor<2*65536, 2*65536, 1, 2*65536, 16+1, 1, 2048, 16, 1024> { };
+struct BranchPredictorImplementation: public CombinedPredictor<2*65536, 2*65536, 1, 2*65536, 16+1, 1, 4096, 16, 1024> { };
 
 void BranchPredictorInterface::destroy() {
   if (impl) delete impl;
