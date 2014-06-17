@@ -11,8 +11,8 @@
 #include <branchpred.h>
 #include <stats.h>
                 
-#if 1
-static const W64 vpc_constants[16]={
+
+static const W64 vpc_constants[32]={
 	0x71e05c389a3c,
 	0xac20af7ee7ca,  
 	0x4c9d0bfadfe9,
@@ -28,31 +28,25 @@ static const W64 vpc_constants[16]={
 	0xb87ccca7a11b,
 	0x2194e702179d,
 	0xc9419b1819d6,
-	0x133fb4a52252,
-	
-}; 
-#else
-static const W64 vpc_constants[16]={
-	0x71e05c,
-	0xac20a3,  
-	0x4c9d0b,
-	0x9c5a00,
-    0x561f49,
-	0xc1540b, 
-	0x17f1b6,
-	0xb20fff,
-	0x358613,
-	0x19ef79,
-	0x8a7832, 
-	0x91aa64,  
-	0xb87ccc,
-	0x2194e7,
-	0xc9419b,
-	0x133fb4
-	
-};
-#endif  
-
+	0x133fb4a52252, 
+	0x4d548b77dd5a,
+	0x07e88af59f0e,
+	0x38f79660a87d, 
+	0x1e2dad252f4b,
+	0x867befa7c556,
+	0xde0b1dc80da0, 
+	0x8d6f794efd35,
+	0xe81a2a9eccd0,    
+	0xbd8344484044,
+	0x50f3073f7e54,
+	0xfa45354e2232,
+	0x3e064dec9aca,
+	0x52a09db15a9e,
+	0x771283ce886d,
+	0x2ca25a46381b,
+	0xdfaec966b5d7 	
+};  
+    
 template <int SIZE>
 struct BimodalPredictor {
   array<byte, SIZE> table;

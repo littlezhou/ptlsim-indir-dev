@@ -20,7 +20,7 @@
 #define BRANCH_HINT_RET         (1 << 3)
   
 
-static const int MAX_VPC_ITERS=16;
+static const int MAX_VPC_ITERS=32;
 
 struct ReturnAddressStackEntry {
   int idx;
