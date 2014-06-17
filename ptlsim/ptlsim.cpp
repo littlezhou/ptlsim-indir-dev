@@ -468,16 +468,26 @@ struct CompareFunc {
       BranchInfo* bb = b.value;
       W64 totA, totB;
       totA = totB = 0;
-      if(ab->isIndirect) { for(int i=0;i<ab->numTargets;++i) { totA +=  ab->taken[i]; } }
+      if(ab->isIndirect) {  totA =  ab->totalTaken; } 
       else { totA =  ab->pred_taken_and_taken + ab->pred_not_taken_and_not_taken + ab->pred_taken_and_not_taken + ab->pred_not_taken_and_taken; }
-      if(bb->isIndirect) { for(int i=0;i<bb->numTargets;++i) { totB +=  bb->taken[i]; } }
+      if(bb->isIndirect) {  totB =  bb->totalTaken;   } 
       else { totB =  bb->pred_taken_and_taken + bb->pred_not_taken_and_not_taken + bb->pred_taken_and_not_taken + bb->pred_not_taken_and_taken; }
       int r = (totA < totB) ? -1 : +1;
       if (totA == totB) r = 0;
       return r;
     }
   };
-
+  
+struct IndirTargetCompareFunc {
+public:
+	  int operator()(const IndirTargetInfo& a, IndirTargetInfo& b) const 
+	  {
+	  	int r = (a.taken > b.taken) ? -1 : +1;
+		if (a.taken == b.taken) r = 0;
+		return r;
+	  }
+     
+};
 
 // Make sure the vtable gets compiled:
 PTLsimMachine dummymachine;
@@ -572,7 +582,8 @@ void output_branch_info()
 	
 	dynarray< KeyValuePair<W64, BranchInfo*> > bInfos(4096);
 	  branchHash.getentries(bInfos);
-	  struct CompareFunc ckvp;
+	  struct CompareFunc ckvp; 
+	  struct IndirTargetCompareFunc ifnc;
 	  superstl::sort(bInfos.data,(size_t)bInfos.size(),ckvp);
 	  W64 cPred=0;
 	  W64 mPred=0;
@@ -591,18 +602,26 @@ void output_branch_info()
 
 	      }else if( bi->pred_not_taken_and_not_taken > bi->pred_taken_and_taken) { ratio = (double)  bi->pred_not_taken_and_not_taken / (double)  bi->pred_taken_and_taken; }
 	      else {  ratio = (double) bi->pred_taken_and_taken / (double)  bi->pred_not_taken_and_not_taken; }
-	      if(!bi->isIndirect) {
-		logfile << "branch addr: ", hexstring(bi->rip, 48), " PT&T: ", intstring(bi->pred_taken_and_taken,20),  " PNT&NT: ",
-		 intstring(bi->pred_not_taken_and_not_taken,20),  " PT&NT: ",  intstring(bi->pred_taken_and_not_taken,20), " PNT&T: ", intstring(bi->pred_not_taken_and_taken,20),  " pred accuracy: ", floatstring((double) cPredCurr / (double) totPredCurr,0,3), " ratio: ", floatstring(ratio,0,3), endl;  
-	      }else
-	      {
-	           logfile << "indir-branch addr: ", hexstring(bi->rip, 48);
-	           logfile << " targets: ", bi->numTargets;
-	           W64 totalTaken = 0;
-	           for(int i=0;i<bi->numTargets;++i) { totalTaken += bi->taken[i]; } 
-	           for(int i=0;i<bi->numTargets && i <2;++i) { logfile <<  " target: " ,  hexstring(bi->targets[i], 48), " taken: ", intstring(bi->taken[i],20) , "(", floatstring((double) bi->taken[i]/(double) totalTaken,0,3), ")" ; }
-	           logfile << " pred accuracy: ", floatstring((double) cPredCurr / (double) totPredCurr,0,3) , endl;
-	      }
+		if(!bi->isIndirect) 
+		{
+			logfile << "branch addr: ", hexstring(bi->rip, 48), " PT&T: ", intstring(bi->pred_taken_and_taken,20),  " PNT&NT: ",
+  				intstring(bi->pred_not_taken_and_not_taken,20),  " PT&NT: ",  intstring(bi->pred_taken_and_not_taken,20), " PNT&T: ", intstring(bi->pred_not_taken_and_taken,20),  " pred accuracy: ", floatstring((double) cPredCurr / (double) totPredCurr,0,3), " ratio: ", floatstring(ratio,0,3), endl;  
+	  	}
+		else
+	    {
+	       	logfile << "indir-branch addr: ", hexstring(bi->rip, 48);
+    	 	logfile << " total-taken: ", bi->totalTaken; 
+	        logfile << " targets: ", bi->numTargets;    
+			superstl::sort(bi->targets,bi->numTargets,ifnc);
+	        for(int i=0;i<bi->numTargets && i <2;++i) 
+			{    
+				double ratio =   100*(double)((double) bi->targets[i].taken/(double) bi->totalTaken);   
+			   
+				//cout.flush();
+		   		logfile <<  " target: " ,  hexstring(bi->targets[i].target, 48), " taken: ", intstring(bi->targets[i].taken,10) , "(", 
+					floatstring(ratio,0,4), ")" ; }
+	           	logfile << " pred accuracy: ", floatstring((double) cPredCurr / (double) totPredCurr,0,3) , endl;
+	      	}
 	  } 
 	  W64 totPred = cPred + mPred; 
 	  logfile << "cPred: ", cPred, " mPred: ", mPred, " pred accuracy: ", (double) cPred / (double) totPred, endl;

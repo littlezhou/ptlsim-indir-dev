@@ -32,31 +32,38 @@ ostream& print_user_context(ostream& os, const UserContext& ctx, int width = 4);
 
 static const int MAX_TRANSOP_BUFFER_SIZE = 4;
 static const int NUM_INDIR_TARGETS = 1024;
+            
 
+typedef struct IndirTargetInfo
+{
+	W64 target;
+	W64 taken;
+};
 struct BranchInfo
  {
       W64 rip;
       bool isIndirect;
       int numTargets;
-      W64 numStalls;
-      W64 targets[NUM_INDIR_TARGETS];
-      W64 taken[NUM_INDIR_TARGETS];
+      W64 totalTaken;
+      W64 numStalls;  
+	  IndirTargetInfo targets[NUM_INDIR_TARGETS];
       W64 pred_taken_and_taken;
       W64 pred_taken_and_not_taken;
       W64 pred_not_taken_and_taken;
       W64 pred_not_taken_and_not_taken;
       BranchInfo() { }
-      BranchInfo(W64 rip):rip(rip) { numTargets = 0; isIndirect = false; memset(targets,0, sizeof(W64) * NUM_INDIR_TARGETS); memset(taken,0,sizeof(W64) * NUM_INDIR_TARGETS); 
+      BranchInfo(W64 rip):rip(rip) { totalTaken = 0; numTargets = 0; isIndirect = false; memset(targets,0, sizeof(IndirTargetInfo) * NUM_INDIR_TARGETS); 
                                      numStalls = pred_taken_and_taken = pred_taken_and_not_taken = pred_not_taken_and_taken = pred_not_taken_and_not_taken = 0; }
      void update_indirect_branch(W64 realrip) {  
             bool found = false;
 
             int idx=-1;
+            ++totalTaken;
             for(int i=0;i<this->numTargets;++i)
             {
-               if(this->targets[i] == realrip) { this->taken[i]++; found = true; break; }
+               if(this->targets[i].target == realrip) { this->targets[i].taken++; found = true; break; }
             }
-            if(!found) { idx = this->numTargets++; assert(idx < NUM_INDIR_TARGETS); this->targets[idx] = realrip; this->taken[idx]++;}
+            if(!found) { idx = this->numTargets++; assert(idx < NUM_INDIR_TARGETS); this->targets[idx].target = realrip; this->targets[idx].taken++;}
      }
 
 };
