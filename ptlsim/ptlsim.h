@@ -31,7 +31,7 @@ void user_process_terminated(int rc);
 ostream& print_user_context(ostream& os, const UserContext& ctx, int width = 4);
 
 static const int MAX_TRANSOP_BUFFER_SIZE = 4;
-static const int NUM_INDIR_TARGETS = 1024;
+static const int NUM_INDIR_TARGETS = 2048;
             
 
 typedef struct IndirTargetInfo

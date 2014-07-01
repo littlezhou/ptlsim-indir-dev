@@ -344,7 +344,7 @@ struct CombinedPredictor {
         
 
 
-W64 predict_vpc(VPCPredictorUpdate& update, W64 branchaddr, W64 target, bool& taken, bool& btbmiss, W64& btbtarget)
+W64 predict_vpc(VPCPredictorUpdate& update, W64 branchaddr, W64 target, bool& taken, bool& btbmiss, W64& btbtarget,W64& btbcount)
 {
     update.cp1 = null;
     update.cp2 = null;
@@ -372,7 +372,11 @@ W64 predict_vpc(VPCPredictorUpdate& update, W64 branchaddr, W64 target, bool& ta
 	taken = (*(update.cp1) >= 2) ? true : false;
     BTBEntry* pbtb = btb.probe(branchaddr);
 	if(!pbtb) { btbmiss = true; }  
-	else { btbtarget = target = pbtb->target; }
+	else 
+	{ 
+		btbtarget = target = pbtb->target; 
+		btbcount = pbtb->count;
+	}
     
     
     //
@@ -412,7 +416,8 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
 {                        
 	         
 	   
-		int last_idx = -1;
+		int last_idx = -1;    
+		W64 max_count=0;
 	    W64 branch_targets[MAX_VPC_ITERS]={0};
 		W64 pred_target=0;  
 		W64 last_pred_target=0;  
@@ -422,11 +427,12 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
 	    if (logable(5)) logfile << "predict_indir. branchaddr: ", hexstring(branchaddr,48), " target: ", hexstring(target,48), endl;
 		for(i=0;i<MAX_VPC_ITERS;++i)
 		{                                            
-			W64 btbtarget = 0;
+			W64 btbtarget = 0;   
+			W64 btbcount = 0;
 			btbmiss = false; 
 			bool taken = false;
 			W64 baddr = (!i) ? branchaddr : branchaddr ^ vpc_constants[i];
-			pred_target = predict_vpc(indirs[update.uuid%192][i],baddr,target,taken,btbmiss,btbtarget); 
+			pred_target = predict_vpc(indirs[update.uuid%192][i],baddr,target,taken,btbmiss,btbtarget,btbcount); 
 			if(taken)
 			{                  
 			   // update.idx = i;   
@@ -439,9 +445,12 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
 				if(!btbmiss)
 				{   
 					had_target = true;  
-					last_pred_target = btbtarget;
-					last_idx = i; 
-				   
+					if(btbcount >= max_count)
+					{     
+						max_count = btbcount;
+						last_pred_target = btbtarget;
+						last_idx = i; 
+				    }
 				}
 				else
 				{
@@ -451,8 +460,9 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
 			}
 		} 
 		// may want to return another legit BTB target        
-	   // logfile <<  "returning: ", target, endl;
-		return target;
+	   // logfile <<  "returning: ", target, endl;   
+		// pick the most frequently taken branch otherwise, return input parameter
+		return had_target? last_pred_target : target;
   }
         
 
@@ -612,8 +622,9 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
     //
 	BTBEntry* pbtb =  btb.probe(branchaddr); 
 	assert(pbtb != null);
-	pbtb->count++;
-    //
+    if(taken) { pbtb->count++; } // touch for LRU purposes (initially touched whenever the addr was accessed)
+   
+   //
     // Now p is a possibly null pointer into the direction prediction table, 
     // and pbtb is a possibly null pointer into the BTB (either to a 
     // matched-on entry or a victim which was LRU in its set)
@@ -671,7 +682,7 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
 
 // template <int METASIZE, int BIMODSIZE, int L1SIZE, int L2SIZE, int SHIFTWIDTH, bool HISTORYXOR, int BTBSETS, int BTBWAYS, int RASSIZE>
 // G-share constraints: METASIZE, BIMODSIZE, 1, L2SIZE, log2(L2SIZE), (HISTORYXOR = true), BTBSETS, BTBWAYS, RASSIZE
-struct BranchPredictorImplementation: public CombinedPredictor<2*65536, 2*65536, 1, 2*65536, 16+1, 1, 4096, 16, 1024> { };
+struct BranchPredictorImplementation: public CombinedPredictor<2*65536, 2*65536, 1, 2*65536, 16+1, 1, 4096*2, 16*2, 1024> { };
 
 void BranchPredictorInterface::destroy() {
   if (impl) delete impl;

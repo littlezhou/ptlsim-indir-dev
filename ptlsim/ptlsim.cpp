@@ -613,7 +613,7 @@ void output_branch_info()
     	 	logfile << " total-taken: ", bi->totalTaken; 
 	        logfile << " targets: ", bi->numTargets;    
 			superstl::sort(bi->targets,bi->numTargets,ifnc);
-	        for(int i=0;i<bi->numTargets && i <2;++i) 
+	        for(int i=0;i<bi->numTargets && i <6;++i) 
 			{    
 				double ratio =   100*(double)((double) bi->targets[i].taken/(double) bi->totalTaken);   
 			   
