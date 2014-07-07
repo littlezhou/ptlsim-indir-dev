@@ -2014,8 +2014,8 @@ int ReorderBufferEntry::commit() {
       event->commit.taken = taken;
       event->commit.predtaken = predtaken;
     }
-
-    thread.branchpred.update(uop.predinfo, end_of_branch_x86_insn, ctx.commitarf[REG_rip]);
+    bool indirPredCorrect = uop.riptaken == ctx.commitarf[REG_rip];
+    thread.branchpred.update(uop.predinfo, end_of_branch_x86_insn, ctx.commitarf[REG_rip],indirPredCorrect);
     per_context_ooocore_stats_update(threadid, branchpred.updates++);
   }
 

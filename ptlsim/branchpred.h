@@ -67,7 +67,6 @@ struct PredictorUpdate {
  
 };
     
-struct VPCPredictorUpdate indirs[192][MAX_VPC_ITERS]; 
 extern W64 branchpred_ras_pushes;
 extern W64 branchpred_ras_overflows;
 extern W64 branchpred_ras_pops;

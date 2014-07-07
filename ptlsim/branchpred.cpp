@@ -10,6 +10,9 @@
 
 #include <branchpred.h>
 #include <stats.h>
+#include <ooocore.h> 
+
+static VPCPredictorUpdate indirs[OutOfOrderModel::ROB_SIZE][MAX_VPC_ITERS]; 
                 
 
 static const W64 vpc_constants[32]={
@@ -432,7 +435,7 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
 			btbmiss = false; 
 			bool taken = false;
 			W64 baddr = (!i) ? branchaddr : branchaddr ^ vpc_constants[i];
-			pred_target = predict_vpc(indirs[update.uuid%192][i],baddr,target,taken,btbmiss,btbtarget,btbcount); 
+			pred_target = predict_vpc(indirs[update.uuid%OutOfOrderModel::ROB_SIZE][i],baddr,target,taken,btbmiss,btbtarget,btbcount); 
 			if(taken)
 			{                  
 			   // update.idx = i;   
@@ -576,14 +579,14 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
 				{
 					// reinforce as taken  
 					if (logable(5)) logfile << "reinforcing: ", hexstring(baddr,48), " with target: ", hexstring(target,48), endl;
-					update_vpc(indirs[update.uuid%192][i],baddr,target,true);     
+					update_vpc(indirs[update.uuid%OutOfOrderModel::ROB_SIZE][i],baddr,target,true);     
 					found = true;
 					break;
 					// we are done
 				}   
 				else
 				{
-					update_vpc(indirs[update.uuid%192][i],baddr,target,false);
+					update_vpc(indirs[update.uuid%OutOfOrderModel::ROB_SIZE][i],baddr,target,false);
 				}
 			}               
   		}
@@ -594,14 +597,14 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
 			if(btb_miss_addr)
 			{                         
 			   btb.select(btb_miss_addr);
-			   update_vpc(indirs[update.uuid%192][idx],btb_miss_addr,target,true);   
+			   update_vpc(indirs[update.uuid%OutOfOrderModel::ROB_SIZE][idx],btb_miss_addr,target,true);   
 			}   
 			else 
 			{   
 			   // otherwise use the LRU  
 			   assert(lru_addr);  
 			   btb.select(lru_addr);   
-			   update_vpc(indirs[update.uuid%192][lru_idx],lru_addr,target,true);                     
+			   update_vpc(indirs[update.uuid%OutOfOrderModel::ROB_SIZE][lru_idx],lru_addr,target,true);                     
 			}
 		}
 	}

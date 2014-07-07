@@ -16,7 +16,7 @@
 #include <syscalls.h>
 
 //++MTY Needed for gcc 4.3+:
-#undef __USE_EXTERN_INLINES
+//#undef __USE_EXTERN_INLINES
 
 //
 // From asm-x86_64/string.h and asm-i386/string.h:

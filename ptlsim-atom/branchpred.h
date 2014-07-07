@@ -18,6 +18,9 @@
 #define BRANCH_HINT_INDIRECT    (1 << 1)
 #define BRANCH_HINT_CALL        (1 << 2)
 #define BRANCH_HINT_RET         (1 << 3)
+  
+
+static const int MAX_VPC_ITERS=32;
 
 struct ReturnAddressStackEntry {
   int idx;
@@ -40,6 +43,19 @@ struct ReturnAddressStackEntry {
 
 ostream& operator <<(ostream& os, const ReturnAddressStackEntry& e);
 
+struct VPCPredictorUpdate
+{
+  W64 uuid;
+  byte* cp1;
+  byte* cp2;
+  byte* cpmeta;
+  // predicted directions:
+  W32 ctxid:8, flags:8, bimodal:1, twolevel:1, meta:1, ras_push:1;
+  ReturnAddressStackEntry ras_old; 
+	
+};  
+
+
 struct PredictorUpdate {
   W64 uuid;
   byte* cp1;
@@ -47,9 +63,10 @@ struct PredictorUpdate {
   byte* cpmeta;
   // predicted directions:
   W32 ctxid:8, flags:8, bimodal:1, twolevel:1, meta:1, ras_push:1;
-  ReturnAddressStackEntry ras_old;
+  ReturnAddressStackEntry ras_old;  
+ 
 };
-
+    
 extern W64 branchpred_ras_pushes;
 extern W64 branchpred_ras_overflows;
 extern W64 branchpred_ras_pops;
@@ -67,7 +84,7 @@ struct BranchPredictorInterface {
   void reset();
   void destroy();
   W64 predict(PredictorUpdate& update, int type, W64 branchaddr, W64 target);
-  void update(PredictorUpdate& update, W64 branchaddr, W64 target);
+  void update(PredictorUpdate& update, W64 branchaddr, W64 target, bool indirPredCorrect);
   void updateras(PredictorUpdate& predinfo, W64 branchaddr);
   void annulras(const PredictorUpdate& predinfo);
   void flush();

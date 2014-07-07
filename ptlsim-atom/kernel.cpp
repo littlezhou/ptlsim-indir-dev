@@ -2237,6 +2237,7 @@ extern "C" void* ptlsim_preinit(void* origrsp, void* nextinit) {
 void user_process_terminated(int rc) {
   x86_set_mxcsr(MXCSR_DEFAULT);
   logfile << "user_process_terminated(rc = ", rc, "): initiating shutdown at ", sim_cycle, " cycles, ", total_user_insns_committed, " commits...", endl, flush;
+  output_branch_info();
   capture_stats_snapshot("final");
   flush_stats();
   logfile << "PTLsim exiting...", endl, flush;
