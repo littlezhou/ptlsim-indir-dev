@@ -16,7 +16,7 @@
 #include <syscalls.h>
 
 //++MTY Needed for gcc 4.3+:
-#undef __USE_EXTERN_INLINES
+//#undef __USE_EXTERN_INLINES
 
 //
 // From asm-x86_64/string.h and asm-i386/string.h:
@@ -616,7 +616,7 @@ extern "C" {
   inline int isspace(int c) { return ((__ismask(c)&(_S)) != 0); }
   inline int isupper(int c) { return ((__ismask(c)&(_U)) != 0); }
   inline int isxdigit(int c) { return ((__ismask(c)&(_D|_X)) != 0); }
-  //inline int isascii(int c) { return (((unsigned char)(c))<=0x7f); }
+//  inline int isascii(int c) { return (((unsigned char)(c))<=0x7f); }
   //inline int toascii(int c) { return (((unsigned char)(c))&0x7f); }
   inline int tolower(int c) { if (isupper(c)) c -= 'A'-'a'; return c; }
   inline int toupper(int c) { if (islower(c)) c -= 'a'-'A'; return c; }

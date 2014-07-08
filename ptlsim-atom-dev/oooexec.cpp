@@ -30,7 +30,7 @@
 #endif
 
 using namespace OutOfOrderModel;
-extern Hashtable<W64, BranchInfo*, 256> branchHash;
+extern Hashtable<W64, BranchInfo*, 2048> branchHash;
 extern bool had_mispredict;
 //
 // Issue Queue
@@ -484,19 +484,22 @@ assert(operands[RS]->ready()); }
       bool cond = bit(bptype, log2(BRANCH_HINT_COND));
       bool indir = bit(bptype, log2(BRANCH_HINT_INDIRECT));
       bool ret = bit(bptype, log2(BRANCH_HINT_RET));
-      BranchInfo* currBranch=null;
-      if(isclass(uop.opcode, OPCLASS_COND_BRANCH)) {
+      BranchInfo* currBranch=null;     
+      
+       if(isclass(uop.opcode, OPCLASS_INDIR_BRANCH) && uop.extshift != BRANCH_HINT_POP_RAS) {
       	 BranchInfo** binfo = 
        	 branchHash.get(
        		uop.rip.rip);  
       	if(null == binfo)
       	{
           BranchInfo* temp = new BranchInfo(uop.rip.rip); 
+          if( isclass(uop.opcode, OPCLASS_INDIR_BRANCH)) { temp->isIndirect = true; }
           branchHash.add(uop.rip.rip, temp); 
           currBranch = temp;
         }	 
     	else { currBranch = *binfo; }
       }
+     
       if unlikely (mispredicted) {
         per_context_ooocore_stats_update(threadid, branchpred.cond[MISPRED] += cond);
         per_context_ooocore_stats_update(threadid, branchpred.indir[MISPRED] += (indir & !ret));
@@ -515,7 +518,8 @@ assert(operands[RS]->ready()); }
         // the branch.
         //
         if likely (isclass(uop.opcode, OPCLASS_COND_BRANCH)) {
-          assert(realrip == uop.ripseq);
+          assert(realrip == uop.ripseq);  
+#if 0
           if(realrip == uop.predinfo.ripafter) 
           {
                 ++currBranch->pred_taken_and_not_taken;
@@ -526,7 +530,7 @@ assert(operands[RS]->ready()); }
               // predicted not taken but taken
                ++currBranch->pred_not_taken_and_taken;
           }
-     
+#endif     
           uop.cond = invert_cond(uop.cond);
           
           //
@@ -536,7 +540,16 @@ assert(operands[RS]->ready()); }
           //
           uop.synthop = get_synthcode_for_cond_branch(uop.opcode, uop.cond, uop.size, 0);
           swap(uop.riptaken, uop.ripseq);
-        } else if unlikely (isclass(uop.opcode, OPCLASS_INDIR_BRANCH)) {
+        } else if unlikely (isclass(uop.opcode, OPCLASS_INDIR_BRANCH)) {  
+		  	if(uop.extshift != BRANCH_HINT_POP_RAS)
+	        { 
+	            assert(currBranch != null);
+	            currBranch->update_indirect_branch(realrip);
+	            ++currBranch->pred_taken_and_not_taken;
+                    struct IndirTargetCompareFunc ifnc;
+                    superstl::sort(currBranch->targets,currBranch->numTargets,ifnc);
+
+	        }
           uop.riptaken = realrip;
           uop.ripseq = realrip;
         } else if unlikely (isclass(uop.opcode, OPCLASS_UNCOND_BRANCH)) { // unconditional branches need no special handling
@@ -564,7 +577,7 @@ assert(operands[RS]->ready()); }
 
         return -1;
       } else {
-
+#if 0
        if(isclass(uop.opcode, OPCLASS_COND_BRANCH)) {
         if(uop.predinfo.ripafter == realrip)
         {
@@ -575,7 +588,17 @@ assert(operands[RS]->ready()); }
               // predicted taken and taken
              ++currBranch->pred_taken_and_taken;
         }
-      }
+      } 
+#endif
+	    if(isclass(uop.opcode, OPCLASS_INDIR_BRANCH) && (uop.extshift != BRANCH_HINT_POP_RAS)) 
+	    {
+		            assert(currBranch != null);
+		            currBranch->update_indirect_branch(realrip);
+		            ++currBranch->pred_taken_and_taken;
+                            struct IndirTargetCompareFunc ifnc;
+                            superstl::sort(currBranch->targets,currBranch->numTargets,ifnc);
+
+	    }
         per_context_ooocore_stats_update(threadid, branchpred.cond[CORRECT] += cond);
         per_context_ooocore_stats_update(threadid, branchpred.indir[CORRECT] += (indir & !ret));
         per_context_ooocore_stats_update(threadid, branchpred.ret[CORRECT] += ret);

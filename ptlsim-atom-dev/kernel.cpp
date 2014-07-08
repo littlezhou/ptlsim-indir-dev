@@ -644,7 +644,7 @@ ostream& operator <<(ostream& os, const MemoryMapExtent& map) {
 #define MAX_MAPS_PER_PROCESS 65536
 
 void AddressSpace::resync_with_process_maps() {
-  bool DEBUG = 0;
+  bool DEBUG = 1;
 
   asp.reset();
 
@@ -1039,7 +1039,7 @@ const char* syscall_names_64bit[] = {
 //
 
 void handle_syscall_64bit() {
-  bool DEBUG = 0; //analyze_in_detail();
+  bool DEBUG = 1; //analyze_in_detail();
   //
   // Handle an x86-64 syscall:
   // (This is called from the assist_syscall ucode assist)
@@ -1160,7 +1160,7 @@ W32 get_sysenter_retaddr(W32 end_of_sysenter_insn) {
 }
 
 void handle_syscall_32bit(int semantics) {
-  bool DEBUG = 0; //analyze_in_detail();
+  bool DEBUG = 1; //analyze_in_detail();
   //
   // Handle a 32-bit syscall:
   // (This is called from the assist_syscall ucode assist)
@@ -1524,7 +1524,7 @@ int is_elf_64bit(const char* filename) {
 }
 
 int ptlsim_inject(int argc, char** argv) {
-  static const bool DEBUG = 0;
+  static const bool DEBUG = 1;
 
   int filename_arg = configparser.parse(config, argc - 1, argv + 1) + 1;
   const char* filename = argv[filename_arg];
@@ -1719,7 +1719,7 @@ int is_elf_valid(const char* filename) {
 }
 
 int ptlsim_inject(int argc, char** argv) {
-  static const bool DEBUG = 0;
+  static const bool DEBUG = 1;
   int status;
   int rc;
 
@@ -2237,6 +2237,7 @@ extern "C" void* ptlsim_preinit(void* origrsp, void* nextinit) {
 void user_process_terminated(int rc) {
   x86_set_mxcsr(MXCSR_DEFAULT);
   logfile << "user_process_terminated(rc = ", rc, "): initiating shutdown at ", sim_cycle, " cycles, ", total_user_insns_committed, " commits...", endl, flush;
+  output_branch_info();
   capture_stats_snapshot("final");
   flush_stats();
   logfile << "PTLsim exiting...", endl, flush;
@@ -2249,7 +2250,7 @@ void user_process_terminated(int rc) {
 // Main simulation driver function
 //
 void switch_to_sim() {
-  static const bool DEBUG = 0;
+  static const bool DEBUG = 1;
 
   logfile << "Baseline state:", endl;
   logfile << ctx;

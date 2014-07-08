@@ -1738,7 +1738,7 @@ namespace OutOfOrderModel {
 
 #else // single issueq
   const Cluster clusters[MAX_CLUSTERS] = {
-    {"all",  2, (FU_ALU0|FU_ALU1|FU_STU0|FU_STU1|FU_LDU0|FU_LDU1|FU_FPU0|FU_FPU1)},
+    {"all",  4, (FU_ALU0|FU_ALU1|FU_STU0|FU_STU1|FU_LDU0|FU_LDU1|FU_FPU0|FU_FPU1)},
    }; // should be 4 wide
   const byte intercluster_latency_map[MAX_CLUSTERS][MAX_CLUSTERS] = {{0}};
   const byte intercluster_bandwidth_map[MAX_CLUSTERS][MAX_CLUSTERS] = {{64}};

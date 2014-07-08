@@ -113,7 +113,7 @@ void PTLsimConfig::reset() {
   continuous_validation = 0;
   validation_start_cycle = 0;
   // FIXME: set perfect_cache to 0
-  perfect_cache = 1; // 0
+  perfect_cache = 0; // 0
   
 
   dumpcode_filename = "test.dat";

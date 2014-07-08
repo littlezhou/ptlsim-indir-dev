@@ -33,7 +33,6 @@ endif
 
 # For GCC versions > 4.2 install version 4.2 and uncomment the following line:
 # CC = g++-4.2
-#CC = g++34
 CC = g++
 
 GCCVER_SPECIFIC =
@@ -54,7 +53,7 @@ INCFLAGS += -DPTLSIM_HYPERVISOR -D__XEN__
 endif
 
 ifdef __x86_64__
-CFLAGS =  -m64 -O2 -g -fomit-frame-pointer -pipe -march=k8 -falign-functions=16 -funroll-loops -funit-at-a-time -minline-all-stringops
+CFLAGS =  -m64 -O3  -fomit-frame-pointer -pipe -march=k8 -falign-functions=16 -funroll-loops -funit-at-a-time -minline-all-stringops
 #CFLAGS = -O2 -g3 -march=k8 -falign-functions=16 -minline-all-stringops
 # -O1 doesn't work
 CFLAGS32BIT = $(CFLAGS) -m32
@@ -185,7 +184,7 @@ ptlsim: ptlmon.o ptlxen.bin.o usage.o $(BASEOBJS) $(STDOBJS) ptlxen-common.o ptl
 	$(CC) $(CFLAGS) ptlmon.o ptlxen.bin.o usage.o $(BASEOBJS) $(STDOBJS) ptlxen-common.o ptlhwdef.o -lxenctrl -lxenguest -lxenstore -lstdc++ -lpthread -Wl,-T,ptlmon.lds -static -o ptlsim
 else
 ptlsim: $(OBJFILES) Makefile ptlsim.lds
-	ld -g -O2 $(OBJFILES) -o ptlsim $(LIBPERFCTR) -static --allow-multiple-definition -T ptlsim.lds -e ptlsim_preinit_entry `$(CC) -print-libgcc-file-name`
+	ld -g -O2 $(OBJFILES) -o ptlsim $(LIBPERFCTR) -static --allow-multiple-definition -T ptlsim.lds -e ptlsim_preinit_entry `gcc -print-libgcc-file-name`
 endif # PTLSIM_HYPERVISOR
 else
 ptlsim: $(OBJFILES) Makefile ptlsim32.lds

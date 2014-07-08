@@ -25,22 +25,60 @@ extern W64 unhalted_cycle_count;
 extern W64 total_uops_committed;
 extern W64 total_user_insns_committed;
 
+void output_branch_info();
 void user_process_terminated(int rc);
 
 ostream& print_user_context(ostream& os, const UserContext& ctx, int width = 4);
 
 static const int MAX_TRANSOP_BUFFER_SIZE = 4;
+static const int NUM_INDIR_TARGETS = 2048;
+            
+
+typedef struct IndirTargetInfo
+{
+	W64 target;
+	W64 taken;
+};
 struct BranchInfo
  {
       W64 rip;
-      W64 numStalls;
+      bool isIndirect;
+      int numTargets;
+      W64 totalTaken;
+      W64 numStalls;  
+	  IndirTargetInfo targets[NUM_INDIR_TARGETS];
       W64 pred_taken_and_taken;
       W64 pred_taken_and_not_taken;
       W64 pred_not_taken_and_taken;
       W64 pred_not_taken_and_not_taken;
       BranchInfo() { }
-      BranchInfo(W64 rip):rip(rip) { numStalls = pred_taken_and_taken = pred_taken_and_not_taken = pred_not_taken_and_taken = pred_not_taken_and_not_taken = 0; }
+      BranchInfo(W64 rip):rip(rip) { totalTaken = 0; numTargets = 0; isIndirect = false; memset(targets,0, sizeof(IndirTargetInfo) * NUM_INDIR_TARGETS); 
+                                     numStalls = pred_taken_and_taken = pred_taken_and_not_taken = pred_not_taken_and_taken = pred_not_taken_and_not_taken = 0; }
+     void update_indirect_branch(W64 realrip) {  
+            bool found = false;
+
+            int idx=-1;
+            ++totalTaken;
+            for(int i=0;i<this->numTargets;++i)
+            {
+               if(this->targets[i].target == realrip) { this->targets[i].taken++; found = true; break; }
+            }
+            if(!found) { idx = this->numTargets++; assert(idx < NUM_INDIR_TARGETS); this->targets[idx].target = realrip; this->targets[idx].taken++;}
+     }
+
 };
+
+struct IndirTargetCompareFunc {
+public:
+          int operator()(const IndirTargetInfo& a, IndirTargetInfo& b) const
+          {
+                int r = (a.taken > b.taken) ? -1 : +1;
+                if (a.taken == b.taken) r = 0;
+                return r;
+          }
+
+};
+
 
 //extern Hashtable<W64, BranchInfo*, 256> Hashtable;
 struct PTLsimConfig;
@@ -126,7 +164,7 @@ void synth_uops_for_bb(BasicBlock& bb);
 struct PTLsimStats;
 void print_banner(ostream& os, const PTLsimStats& stats, int argc = 0, char** argv = null);
 
-//extern ostream logfile;
+extern ostream logfile;
 extern W64 user_insn_commits;
 extern W64 iterations;
 extern W64 total_uops_executed;

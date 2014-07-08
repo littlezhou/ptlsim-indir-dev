@@ -480,7 +480,7 @@ assert(operands[RS]->ready()); }
       bool ret = bit(bptype, log2(BRANCH_HINT_RET));
       BranchInfo* currBranch=null;   
 
-	  if(/*isclass(uop.opcode, OPCLASS_COND_BRANCH) || */ isclass(uop.opcode, OPCLASS_INDIR_BRANCH) && uop.extshift != BRANCH_HINT_POP_RAS) {
+	  if(isclass(uop.opcode, OPCLASS_INDIR_BRANCH) && uop.extshift != BRANCH_HINT_POP_RAS) {
       	 BranchInfo** binfo = 
        	 branchHash.get(
        		uop.rip.rip);  

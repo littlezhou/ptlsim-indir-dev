@@ -40,7 +40,7 @@ static W16s robNonBlockingJmpIdx=-1;
 static W16s storeIndices[256];
 static int storeLen=0;
 static W16s childIndices[256];   
-static const double threshold = 0.05f;
+static const double threshold = 0.03f;
 static int childLen=0;
 bool had_mispredict=false;
 using namespace OutOfOrderModel;      
@@ -1089,8 +1089,8 @@ void ThreadContext::rename() {
     physreg->rob = &rob;
     physreg->archreg = rob.uop.rd;
     rob.physreg = physreg; 
-
-	if(isclass(rob.uop.opcode, OPCLASS_COND_BRANCH)) 
+    
+    if(isclass(rob.uop.opcode, OPCLASS_INDIR_BRANCH) && rob.uop.extshift != BRANCH_HINT_POP_RAS)
 	{
 		BranchInfo** binfo =
         branchHash.get(rob.uop.rip.rip);
@@ -1099,24 +1099,13 @@ void ThreadContext::rename() {
           	BranchInfo* bi = *binfo;
       		W64 cPredCurr = bi->pred_taken_and_taken +  bi->pred_not_taken_and_not_taken;
       		W64 mPredCurr = (bi->pred_taken_and_not_taken + bi->pred_not_taken_and_taken);
-      		W64 taken =  bi->pred_taken_and_taken +  bi->pred_not_taken_and_taken;
-      		W64 notTaken =  bi->pred_not_taken_and_not_taken + (bi->pred_taken_and_not_taken); 
-      		W64 branchCount = taken + notTaken; 
+			W64 branchCount = bi->totalTaken;
       		W64 totPredCurr = cPredCurr + mPredCurr;       
-      		W64 moreTaken = 0;
-	  		stringbuf dir;
-	  		if(notTaken > taken)
-	  		{	          
-	   			moreTaken = notTaken;
-	  		}
-	 		else
-	  		{                    
-	   			moreTaken = taken;
-	  		}
-      		double predAccuracy =   (double) cPredCurr / (double) totPredCurr;
-	  		double bias =   (double)moreTaken/(double)branchCount;     
-			if(predAccuracy >= (bias + threshold)) 
-			{
+      		stringbuf dir;
+	  		double predAccuracy =   (double) cPredCurr / (double) totPredCurr;
+	  		double bias =   (double)bi->targets[0].taken/(double)branchCount;     // we should be sorted in non-decreasing order so the first target should be the most taken
+			if(inrange(predAccuracy,bias-threshold,bias+threshold) && bias < .99f)
+		    {
 				rob.nonblocking = true; 
                  //logfile << "marking initial producers: ", rob.idx, endl;
              	if unlikely (config.event_log_enabled){  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rob); }
@@ -2407,8 +2396,8 @@ int ReorderBufferEntry::commit() {
       event->commit.taken = taken;
       event->commit.predtaken = predtaken;
     }
-
-    thread.branchpred.update(uop.predinfo, end_of_branch_x86_insn, ctx.commitarf[REG_rip]);
+    bool indirPredCorrect = uop.riptaken == ctx.commitarf[REG_rip];
+    thread.branchpred.update(uop.predinfo, end_of_branch_x86_insn, ctx.commitarf[REG_rip],indirPredCorrect);
     per_context_ooocore_stats_update(threadid, branchpred.updates++);
   }
 
