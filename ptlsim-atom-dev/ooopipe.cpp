@@ -32,7 +32,7 @@ static const bool basicTrue = true;
 static bool mark_successors=false;   
 static W64  count_successors=0;
 static W64  total_marked=0;
-extern Hashtable<W64, BranchInfo*, 256> branchHash;
+extern Hashtable<W64, BranchInfo*, 2048> branchHash;
 static Hashtable<W64,bool,2048> robIds;     
 static int arrLen=0;
 static W16s robIndices[256];           
@@ -1572,7 +1572,7 @@ int count=NUM_NONBLOCKING_BRANCHES;
     if unlikely (core.dispatchcount >= DISPATCH_WIDTH) break;
 
     // All operands start out as valid, then get put on wait queues if they are not actually ready.
-    if(isclass(rob->uop.opcode, OPCLASS_COND_BRANCH))
+    if(isclass(rob->uop.opcode, OPCLASS_INDIR_BRANCH) && rob->uop.extshift != BRANCH_HINT_POP_RAS)
     {        
 	   
         bool containsNonBlockingBranch = false;
@@ -1586,8 +1586,8 @@ int count=NUM_NONBLOCKING_BRANCHES;
 	        ThreadContext* thread = getcore().threads[threadid];
 	        if(!inrange(idx, 0, ROB_SIZE-1)) { break; /* invalid slot */  }
 	        ReorderBufferEntry& rrob = thread->ROB[idx];
-	        if(isclass(rrob.uop.opcode, OPCLASS_COND_BRANCH)) 
-	        {
+	        if(isclass(rrob.uop.opcode, OPCLASS_INDIR_BRANCH) && rrob.uop.extshift != BRANCH_HINT_POP_RAS)                  
+		    {
 				if(rrob.nonblocking)
 				{
 					--count;
