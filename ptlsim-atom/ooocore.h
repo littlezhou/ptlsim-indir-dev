@@ -336,7 +336,7 @@ namespace OutOfOrderModel {
   const int ROB_SIZE = 192;
   
   // Maximum number of branches in the pipeline at any given time
-  const int MAX_BRANCHES_IN_FLIGHT = 16;
+  const int MAX_BRANCHES_IN_FLIGHT = 32;
 
   // Set this to combine the integer and FP phys reg files:
   // #define UNIFIED_INT_FP_PHYS_REG_FILE

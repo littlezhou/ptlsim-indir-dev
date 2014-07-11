@@ -1288,7 +1288,7 @@ ostream& OutOfOrderCoreEvent::print(ostream& os) const {
   }
   case EVENT_ISSUE_OK: {
     stringbuf sb;
-    sb << "issue  rob ", intstring(rob, -3), "(",padstring(uopname,-5),")";
+    sb << "issue rip: 0x", hexstring(rip.rip, 24) ," rob ", intstring(rob, -3), "(",padstring(uopname,-5),")";
     sb << " on ", padstring(fu_names[fu], -4), " in ", padstring(cluster_names[cluster], -4), ": r", intstring(physreg, -3), "@", phys_reg_file_names[rfid];
     sb << " "; print_value_and_flags(sb, issue.state.reg.rddata, issue.state.reg.rdflags); sb << " =";
     sb << " "; print_value_and_flags(sb, issue.operand_data[RA], issue.operand_flags[RA]); sb << ", ";

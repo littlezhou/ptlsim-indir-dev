@@ -45,7 +45,9 @@ static int childLen=0;
 bool had_mispredict=false;
 using namespace OutOfOrderModel;      
 static bool containsSet[ROB_SIZE];        
-static const bool markStoreAsNonBlocking = true;
+static const bool markStoreAsNonBlocking = true;    
+typedef bool (*ExcludeRobFunc)(ReorderBufferEntry& rob);
+
 
 void OutOfOrderCoreCacheCallbacks::icache_wakeup(LoadStoreInfo lsi, W64 physaddr) {
   foreach (i, core.threadcount) {
@@ -695,6 +697,45 @@ BasicBlock* ThreadContext::fetch_or_translate_basic_block(const RIPVirtPhys& rvp
 //
 //    
 
+
+bool should_exclude_rob(ReorderBufferEntry& rob, ExcludeRobFunc* funcs,int numFuncs)
+{                                                                             
+	bool retVal = false;
+	for(int i=0;i<numFuncs;++i)
+	{
+		if(funcs[i](rob)) 
+		{
+			return true;
+		}
+	}
+	return false;
+	
+}
+
+    
+bool is_rsp_manipulation(ReorderBufferEntry& rob)
+{      
+	bool retVal = false; 
+	if(isclass(rob.uop.opcode,OPCLASS_ADDSUB))
+   	{   
+		bool found_rsp = false;
+		foreach (i, MAX_OPERANDS) 
+		{ 
+	    	if(rob.operands[i])
+	        {
+				if(rob.operands[i]->archreg == REG_rsp)
+				{
+					found_rsp = true;
+					break;
+				}
+			}                                             
+		}   
+		return found_rsp;
+   	}                   
+	return retVal;
+}                          
+
+
 bool trace_reg_is_operand(ReorderBufferEntry& rob)       
 {       
 	bool trace=false;
@@ -709,7 +750,7 @@ bool trace_reg_is_operand(ReorderBufferEntry& rob)
 	}
 	return trace;   
 }
-        
+         
 
 bool exclude_from_nonblocking(ReorderBufferEntry& rob)
 {                                                     
@@ -720,7 +761,11 @@ bool exclude_from_nonblocking(ReorderBufferEntry& rob)
 	if(trace_reg_is_operand(rob) && rob.uop.opcode == OP_add)
 	{
 		return true;
-	}  
+	}             
+	if(is_rsp_manipulation(rob))
+	{
+		return true;
+	}
 	return false;
 }
 
@@ -737,9 +782,10 @@ void mark_descendants(W16s fIdx, ReorderBufferEntry& rob)
       {
           if(!rrob.nonblocking && rrob.operands[i] && rrob.operands[i]->rob && rrob.operands[i]->rob->idx == rob.idx)
           {
-               	if unlikely (config.event_log_enabled) { rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rrob); }
+               	
                	if(!exclude_from_nonblocking(rob))
-				{  
+				{       
+					if unlikely (config.event_log_enabled) { rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rrob); }    
 					rrob.nonblocking = true;    
 				}
 				if(!containsSet[rrob.idx])
@@ -765,9 +811,14 @@ W16s find_previous_block(W16s fIdx,ReorderBufferEntry& rob, Hashtable<W64,bool,2
 	
 	if(idx < 0) { idx = ROB_SIZE-1;}      
 	while(idx != fIdx)
-        {
-         	ReorderBufferEntry& rrob = rob.getthread().ROB[idx];
-                if(markStoreAsNonBlocking && isclass(rrob.uop.opcode, OPCLASS_STORE)) { storeIndices[storeLen++] = idx; rrob.nonblocking = true; }
+    {
+    	ReorderBufferEntry& rrob = rob.getthread().ROB[idx];
+        if(markStoreAsNonBlocking && isclass(rrob.uop.opcode, OPCLASS_STORE)) 
+		{ 
+			storeIndices[storeLen++] = idx; 
+			rrob.nonblocking = true;   
+		    if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rrob); }  
+		}
 		if(isclass(rrob.uop.opcode, OPCLASS_COND_BRANCH) || !rrob.entry_valid || rrob.issued)
 		{
 			return idx;
@@ -846,12 +897,13 @@ void mark_producers_one_block(ReorderBufferEntry& rob,W16s fIdx, Hashtable<W64,b
 			bool* found = robIds.get(rob.operands[i]->rob->idx);
 			if(found == null) { if logable(99) { logfile << "after robIds.get: non found", endl;}    continue;}
            #endif
-			if unlikely (config.event_log_enabled) {  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,rob.operands[i]->rob); }
+			
 		   // if(!isload(rob.operands[i]->rob->uop.opcode))
 			if(!exclude_from_nonblocking(*(rob.operands[i]->rob)))
-			{
-				 rob.operands[i]->rob->nonblocking = true;   
-			         ++total_marked;
+			{              
+				if unlikely (config.event_log_enabled) {  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,rob.operands[i]->rob); }   
+				rob.operands[i]->rob->nonblocking = true;   
+			    ++total_marked;
 			}
 			if(!containsSet[rob.operands[i]->rob->idx]) 
 			{
@@ -904,7 +956,34 @@ void mark_store_producers_this_block(W16s fIdx, ReorderBufferEntry& rob)
 		if(idx < 0) { idx = ROB_SIZE-1;}  
 	} 
 }
-      
+     
+
+     
+
+void simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
+{
+	W16s idx = rob.idx;     
+    W64 rip = rob.uop.rip.rip; 
+	ExcludeRobFunc funcs[]={is_rsp_manipulation};
+   	do
+    {                       
+	   
+		ReorderBufferEntry& rrob = rob.getthread().ROB[idx];     
+	   	if(rrob.uop.rip.rip != rip) {  break; }   
+	    if(!should_exclude_rob(rrob,funcs,1))
+	    {     
+			if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rrob); }    		       	              
+			rrob.nonblocking = true; 
+		}  
+	    
+		--idx;
+		if(idx < 0) { idx = ROB_SIZE-1;}  
+	} while(idx != fIdx);
+
+}
+	
+
+
 void simple_mark_store_producers_this_block(W16s fIdx, ReorderBufferEntry& rob)
 {
 	W16s idx = rob.idx;     
@@ -916,7 +995,8 @@ void simple_mark_store_producers_this_block(W16s fIdx, ReorderBufferEntry& rob)
 		ReorderBufferEntry& rrob = rob.getthread().ROB[idx];     
 	   	if(rrob.uop.rip.rip != rip) {  break; }   
 	   	if(!isclass(rrob.uop.opcode,OPCLASS_LOAD))   // exclude loads that feed this store
-		{     
+		{          
+			if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rrob); }  
 			rrob.nonblocking = true;     		       	   
 		}
 		--idx;
@@ -1104,7 +1184,7 @@ void ThreadContext::rename() {
       		stringbuf dir;
 	  		double predAccuracy =   (double) cPredCurr / (double) totPredCurr;
 	  		double bias =   (double)bi->targets[0].taken/(double)branchCount;     // we should be sorted in non-decreasing order so the first target should be the most taken
-			if(inrange(predAccuracy,bias-threshold,bias+threshold) && bias < .99f)
+			if(((predAccuracy >= bias+threshold) || inrange(predAccuracy,bias-threshold,bias+threshold)) && bias < .99f)
 		    {
 				rob.nonblocking = true; 
                  //logfile << "marking initial producers: ", rob.idx, endl;
@@ -1115,7 +1195,8 @@ void ThreadContext::rename() {
 				memset(containsSet,false,sizeof(bool)*ROB_SIZE);
 			        storeLen = childLen = arrLen = 0;
 				if logable(99) {  logfile << "before find_previous_block", endl;         }
-			 	W16s endIdx = find_previous_block(rob.idx,rob,robIds);     
+			 	W16s endIdx = find_previous_block(rob.idx,rob,robIds);        
+				simple_mark_all_indir_jmp_uops(rob.idx,rob);
 				assert(inrange(arrLen,0,256));
 				if logable(99) {  logfile << "before mark_producers_one_block", endl;         }
                 robNonBlockingJmpIdx = rob.idx;
@@ -1164,12 +1245,13 @@ void ThreadContext::rename() {
 						{
 						   	if(!exclude_from_nonblocking(rob))
 						   	{
-						 		   rob.nonblocking = true;
+						 		   rob.nonblocking = true;        
+								   if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob); }	  
 							}
 							found = true;  
 							
 							++count_successors;  
-						    if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob); }	
+						  
 							if(!containsSet[rob.idx]) 
 							{
 								childIndices[childLen++] = rob.idx;

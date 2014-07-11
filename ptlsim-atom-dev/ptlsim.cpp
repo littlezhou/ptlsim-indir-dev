@@ -570,7 +570,7 @@ void update_progress() {
 void output_branch_info()
 {
 	
-	dynarray< KeyValuePair<W64, BranchInfo*> > bInfos(4096);
+       	  dynarray< KeyValuePair<W64, BranchInfo*> > bInfos(4096);
 	  branchHash.getentries(bInfos);
 	  struct CompareFunc ckvp; 
 	  struct IndirTargetCompareFunc ifnc;
