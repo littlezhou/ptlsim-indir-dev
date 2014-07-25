@@ -626,6 +626,8 @@ void ReorderBufferEntry::reset() {
   cycles_left = 0;
   broadcast = false;
   nonblocking = false;
+  nb_successor = false;
+  nb_jmp = false;
   physreg = (PhysicalRegister*)null;
   lfrqslot = -1;
   lsq = 0;
@@ -1278,6 +1280,18 @@ ostream& OutOfOrderCoreEvent::print(ostream& os) const {
   case EVENT_FOUND_NONBLOCKING:
     os << "found-nonblocking  rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24);
   break; 
+  case EVENT_FOUND_BLOCKING_READY:
+     os << "found-blocking-ready  rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24);
+  break;
+  case EVENT_FOUND_NONBLOCKING_READY:
+     os << "found-nonblocking-ready  rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24);
+  break;
+  case EVENT_FORWARD_NONBLOCKING:
+      os << "forwarding-nonblocking rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24);
+  break;
+  case EVENT_NOT_FORWARDING:
+     os << "not-forwarding rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24);
+  break;
   case EVENT_CLUSTER_NO_CLUSTER:
   case EVENT_CLUSTER_OK: {
     os << ((type == EVENT_CLUSTER_OK) ? "clustr" : "noclus"), " rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " allowed FUs = ", 

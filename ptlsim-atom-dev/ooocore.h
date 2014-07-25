@@ -679,6 +679,8 @@ namespace OutOfOrderModel {
     FetchBufferEntry uop;
     bool broadcast;
     bool nonblocking;
+    bool nb_successor;
+    bool nb_jmp;
     struct StateList* current_state_list;
     PhysicalRegister* physreg;
     PhysicalRegister* operands[MAX_OPERANDS];
@@ -1059,6 +1061,8 @@ namespace OutOfOrderModel {
     EVENT_ISSUE_OK,
     EVENT_FOUND_NONBLOCKING,
     EVENT_FOUND_NONBLOCKING_SUCCESSOR,
+    EVENT_FOUND_BLOCKING_READY,
+    EVENT_FOUND_NONBLOCKING_READY,
     EVENT_REPLAY,
     EVENT_STORE_EXCEPTION,
     EVENT_STORE_WAIT,
@@ -1111,7 +1115,9 @@ namespace OutOfOrderModel {
     EVENT_COMMIT_OK,
     EVENT_RECLAIM_PHYSREG,
     EVENT_RELEASE_MEM_LOCK,
-    EVENT_NONBLOCKING_DISPATCH_STALL
+    EVENT_NONBLOCKING_DISPATCH_STALL,
+    EVENT_FORWARD_NONBLOCKING,
+    EVENT_NOT_FORWARDING
   };
 
   //

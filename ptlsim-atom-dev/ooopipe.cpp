@@ -47,7 +47,7 @@ using namespace OutOfOrderModel;
 static bool containsSet[ROB_SIZE];        
 static const bool markStoreAsNonBlocking = true;    
 typedef bool (*ExcludeRobFunc)(ReorderBufferEntry& rob);
-
+PhysicalRegister* lastNonBlockingPhysReg = null;
 
 void OutOfOrderCoreCacheCallbacks::icache_wakeup(LoadStoreInfo lsi, W64 physaddr) {
   foreach (i, core.threadcount) {
@@ -711,24 +711,36 @@ bool should_exclude_rob(ReorderBufferEntry& rob, ExcludeRobFunc* funcs,int numFu
 	return false;
 	
 }
+      
+bool is_rob_store(ReorderBufferEntry& rob)
+{
+	return isstore(rob.uop.opcode);
+}     
 
-    
+bool is_opclass_collcc(ReorderBufferEntry& rob)    
+{
+	return rob.uop.opcode == OP_collcc;
+}
+
+bool is_opclass_mov(ReorderBufferEntry& rob)
+{
+	return rob.uop.opcode == OP_mov;
+}     
+
 bool is_rsp_manipulation(ReorderBufferEntry& rob)
 {      
 	bool retVal = false; 
-	if(isclass(rob.uop.opcode,OPCLASS_ADDSUB))
+	if(isclass(rob.uop.opcode,OPCLASS_ADDSUB) || isclass(rob.uop.opcode,OPCLASS_STORE))
    	{   
 		bool found_rsp = false;
 		foreach (i, MAX_OPERANDS) 
 		{ 
-	    	if(rob.operands[i])
-	        {
-				if(rob.operands[i]->archreg == REG_rsp)
-				{
+	    	if(rob.operands[i] && rob.operands[i]->archreg == REG_rsp)
+			{
 					found_rsp = true;
 					break;
-				}
-			}                                             
+			}
+			                                             
 		}   
 		return found_rsp;
    	}                   
@@ -964,13 +976,14 @@ void simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
 {
 	W16s idx = rob.idx;     
     W64 rip = rob.uop.rip.rip; 
-	ExcludeRobFunc funcs[]={is_rsp_manipulation};
+	ExcludeRobFunc funcs[]={is_rsp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store};  
+	int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);
    	do
     {                       
 	   
 		ReorderBufferEntry& rrob = rob.getthread().ROB[idx];     
 	   	if(rrob.uop.rip.rip != rip) {  break; }   
-	    if(!should_exclude_rob(rrob,funcs,1))
+	    if(!should_exclude_rob(rrob,funcs,nFuncs))
 	    {     
 			if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rrob); }    		       	              
 			rrob.nonblocking = true; 
@@ -996,7 +1009,7 @@ void simple_mark_store_producers_this_block(W16s fIdx, ReorderBufferEntry& rob)
 	   	if(rrob.uop.rip.rip != rip) {  break; }   
 	   	if(!isclass(rrob.uop.opcode,OPCLASS_LOAD))   // exclude loads that feed this store
 		{          
-			if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rrob); }  
+			if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rrob); }  
 			rrob.nonblocking = true;     		       	   
 		}
 		--idx;
@@ -1186,7 +1199,9 @@ void ThreadContext::rename() {
 	  		double bias =   (double)bi->targets[0].taken/(double)branchCount;     // we should be sorted in non-decreasing order so the first target should be the most taken
 			if(((predAccuracy >= bias+threshold) || inrange(predAccuracy,bias-threshold,bias+threshold)) && bias < .99f)
 		    {
-				rob.nonblocking = true; 
+				rob.nonblocking = true;  
+				lastNonBlockingPhysReg = physreg;   
+				rob.nb_jmp = true;
                  //logfile << "marking initial producers: ", rob.idx, endl;
              	if unlikely (config.event_log_enabled){  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rob); }
 			 	//mark_producers(rob,rob.idx,0);
@@ -1195,13 +1210,16 @@ void ThreadContext::rename() {
 				memset(containsSet,false,sizeof(bool)*ROB_SIZE);
 			        storeLen = childLen = arrLen = 0;
 				if logable(99) {  logfile << "before find_previous_block", endl;         }
-			 	W16s endIdx = find_previous_block(rob.idx,rob,robIds);        
+			 	// W16s endIdx = find_previous_block(rob.idx,rob,robIds);        
 				simple_mark_all_indir_jmp_uops(rob.idx,rob);
 				assert(inrange(arrLen,0,256));
 				if logable(99) {  logfile << "before mark_producers_one_block", endl;         }
                 robNonBlockingJmpIdx = rob.idx;
 			        total_marked = 0;
-				mark_producers_one_block(rob,rob.idx,robIds,0);
+#if 0		    
+    	        // mark ancestors
+			    mark_producers_one_block(rob,rob.idx,robIds,0);
+
                 if(storeLen) // mark store ancestors
                 {
 					for(int i=0;i<storeLen;++i)
@@ -1209,7 +1227,8 @@ void ThreadContext::rename() {
 				        mark_producers_one_block( rob.getthread().ROB[storeIndices[i]], rob.idx, robIds, 0);	
                     }
                 }
-						//mark_previous_block(rob.idx,rob);
+						//mark_previous_block(rob.idx,rob);   
+#endif 
 				mark_successors = true;       
                                 
 				count_successors = 0;
@@ -1227,6 +1246,35 @@ void ThreadContext::rename() {
 	}
    	else if(mark_successors)
 	{
+			if(isclass(rob.uop.opcode,OPCLASS_COND_BRANCH)) 
+			{ 
+				mark_successors = false; 
+			}    // stop rolling
+			else
+			{
+				assert(lastNonBlockingPhysReg);
+				ExcludeRobFunc funcs[]={is_rsp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store,is_opclass_mov};  
+				int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);
+			   	if(should_exclude_rob(rob,funcs,nFuncs) && lastNonBlockingPhysReg->allocated())
+				{       
+					bool found=false;
+				    foreach (i, MAX_OPERANDS)  
+				    {
+						if(rob.operands[i] ==  &core.physregfiles[0][PHYS_REG_NULL])
+					   	{
+							found = true;
+							rob.operands[i] = lastNonBlockingPhysReg;
+							rob.operands[i]->addref(rob, threadid);     
+							rob.nonblocking = true;  
+							rob.nb_successor = true;
+							if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob); } 
+							break;
+						}
+					
+					}                      
+				}
+			}   
+			#if 0
 			bool found=false;
 	        if(markStoreAsNonBlocking && isclass(rob.uop.opcode, OPCLASS_STORE))
 			{           
@@ -1264,7 +1312,8 @@ void ThreadContext::rename() {
 					}
 					if(found) {  break; }
 				}
-			}
+			} 
+			#endif
 	  }
    
 
@@ -1648,7 +1697,7 @@ int ThreadContext::dispatch() {
   OutOfOrderCoreEvent* event;
   ReorderBufferEntry* rob;      
  
-static const int NUM_NONBLOCKING_BRANCHES = 2; // FIXME: originally set as 2                  
+static const int NUM_NONBLOCKING_BRANCHES = 3; // FIXME: originally set as 2                  
 int count=NUM_NONBLOCKING_BRANCHES;
   foreach_list_mutable(rob_ready_to_dispatch_list, rob, entry, nextentry) {
     if unlikely (core.dispatchcount >= DISPATCH_WIDTH) break;
@@ -1686,7 +1735,7 @@ int count=NUM_NONBLOCKING_BRANCHES;
 			if unlikely (config.event_log_enabled) { rob->getcore().eventlog.add(EVENT_NONBLOCKING_DISPATCH_STALL,rob);  }
 			stats.ooocore.dispatch.outstanding_nonblocking_dispatch_stall++; 
 			break; 
-              } 
+          } 
 	   
     }
 

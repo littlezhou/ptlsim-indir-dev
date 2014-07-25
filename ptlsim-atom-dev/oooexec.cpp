@@ -31,7 +31,8 @@
 
 using namespace OutOfOrderModel;
 extern Hashtable<W64, BranchInfo*, 2048> branchHash;
-extern bool had_mispredict;
+extern bool had_mispredict; 
+extern PhysicalRegister* lastNonBlockingPhysReg;
 //
 // Issue Queue
 //
@@ -2012,11 +2013,15 @@ int OutOfOrderCore::issue(int cluster) {
     int iqslot;
     issueq_operation_on_cluster_with_result(getcore(), cluster, iqslot, issue());
     // Is anything ready?
-    if unlikely (iqslot < 0) break;
+    if unlikely (iqslot < 0) break; 
+  
      // in-order execution 
     if (iqslot != 0)
     {
-		bool canSkip = true;   
+		bool canSkip = true;
+		bool foundNbJmp = false;   
+		bool containsSuccessor = false;  
+	   	ReorderBufferEntry* oldestNbJmpRob=null;                    
 	    int robid;
 		issueq_operation_on_cluster_with_result(getcore(), cluster, robid, uopof(iqslot));
 		int threadid, idx;
@@ -2025,32 +2030,48 @@ int OutOfOrderCore::issue(int cluster) {
 	    ReorderBufferEntry& rob = thread->ROB[idx];   
 		if(!rob.nonblocking)
 		{
+         	if unlikely (config.event_log_enabled){ getcore().eventlog.add(EVENT_FOUND_BLOCKING_READY,&rob);}
 	    	for(int i=0;i<iqslot;++i)
 			{
 		   		int robid;
 		   		issueq_operation_on_cluster_with_result(getcore(), cluster, robid, uopof(i));
 				int threadid, idx;
-		    	        decode_tag(robid, threadid, idx);
+		    	decode_tag(robid, threadid, idx);
 				ThreadContext* thread = threads[threadid];
 				if(!inrange(idx, 0, ROB_SIZE-1)) 
-				{        canSkip = false;  
-                     			 break; 
-	 		        }
+				{        
+					    canSkip = false;  
+                        break; 
+	 		    }
 				ReorderBufferEntry& rob = thread->ROB[idx];
-				canSkip =  canSkip && rob.nonblocking;		    			
+				canSkip =  canSkip && rob.nonblocking; 
+				containsSuccessor |= rob.nb_successor; 
+				if(rob.nb_jmp && !foundNbJmp)
+				{
+					foundNbJmp = true;
+					oldestNbJmpRob = &thread->ROB[idx];
+				}  	    			
 			}
               
 		}
 		else 
 		{
+             if unlikely (config.event_log_enabled){ getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_READY,&rob);}
 			 canSkip = false;
 		}
 		if(!canSkip)
-       		{ 
-	  		issueq_operation_on_cluster(getcore(), cluster, replay(iqslot)); 
-      			break;
+       	{                                                         
+	   	 //   if(containsSuccessor && lastNonBlockingPhysReg && lastNonBlockingPhysReg->allocated() && lastNonBlockingPhysReg->rob && lastNonBlockingPhysReg->rob->cluster >= 0)
+		    if(containsSuccessor && foundNbJmp && oldestNbJmpRob)
+		 	{                                          
+			    if unlikely (config.event_log_enabled){ getcore().eventlog.add(EVENT_FORWARD_NONBLOCKING,oldestNbJmpRob);}     
+			    oldestNbJmpRob->forward_cycle = 0;
+			   	oldestNbJmpRob->forward();
+			}
+			issueq_operation_on_cluster(getcore(), cluster, replay(iqslot)); 
+      		break;
 		} 
-                stats.ooocore.issue.blocking_issued++;
+        stats.ooocore.issue.blocking_issued++;
     }
 
     int robid;
@@ -2089,16 +2110,16 @@ int ReorderBufferEntry::forward() {
 
   W32 targets = forward_at_cycle_lut[cluster][forward_cycle];
   foreach (i, MAX_CLUSTERS) {
-    if likely (!bit(targets, i)) {  continue; }
+	if likely (!bit(targets, i)) {  if(config.event_log_enabled) { getcore().eventlog.add(EVENT_NOT_FORWARDING, this); }   continue; }
     if unlikely (config.event_log_enabled) {
       OutOfOrderCoreEvent* event = getcore().eventlog.add(EVENT_BROADCAST, this);
       event->forwarding.target_cluster = i;
       event->forwarding.forward_cycle = forward_cycle;
     }
-    this->broadcast = true;
+    //this->broadcast = true;
     issueq_operation_on_cluster(getcore(), i, broadcast(get_tag()));
   }
-  if(!this->broadcast) { logfile << "not broadcasting", endl; }
+  // if(!this->broadcast) { logfile << "not broadcasting", endl; }
   return 0;
 }
 
