@@ -579,25 +579,18 @@ void output_branch_info()
 	  W64 mPred=0;
 	  for(int i=0;i<bInfos.size();++i)
 	  {
-	      KeyValuePair<W64, BranchInfo*> kvp = bInfos[i];
-	      BranchInfo* bi = kvp.value;
+	      KeyValuePair<W64, BranchInfo*> kvp = bInfos[i];  
+		  
+	        BranchInfo* bi = kvp.value; 
+			if(!bi->isIndirect) { continue; }
 	        W64 cPredCurr = bi->pred_taken_and_taken +  bi->pred_not_taken_and_not_taken;
 	        W64 mPredCurr = (bi->pred_taken_and_not_taken + bi->pred_not_taken_and_taken);
 	        cPred += cPredCurr;
 	        mPred += mPredCurr;
 	        W64 totPredCurr = cPredCurr + mPredCurr;
-	      double ratio = 0.0;
-	      if(  !bi->pred_not_taken_and_not_taken  || !bi->pred_taken_and_taken) 
-	      {
-
-	      }else if( bi->pred_not_taken_and_not_taken > bi->pred_taken_and_taken) { ratio = (double)  bi->pred_not_taken_and_not_taken / (double)  bi->pred_taken_and_taken; }
-	      else {  ratio = (double) bi->pred_taken_and_taken / (double)  bi->pred_not_taken_and_not_taken; }
-		if(!bi->isIndirect) 
-		{
-			logfile << "branch addr: ", hexstring(bi->rip, 48), " PT&T: ", intstring(bi->pred_taken_and_taken,20),  " PNT&NT: ",
-  				intstring(bi->pred_not_taken_and_not_taken,20),  " PT&NT: ",  intstring(bi->pred_taken_and_not_taken,20), " PNT&T: ", intstring(bi->pred_not_taken_and_taken,20),  " pred accuracy: ", floatstring((double) cPredCurr / (double) totPredCurr,0,3), " ratio: ", floatstring(ratio,0,3), endl;  
-	  	}
-		else
+	     
+	   
+		if(bi->isIndirect)
 	    {
 	       	logfile << "indir-branch addr: ", hexstring(bi->rip, 48);
     	 	logfile << " total-taken: ", bi->totalTaken; 
@@ -611,7 +604,32 @@ void output_branch_info()
 		   		logfile <<  " target: " ,  hexstring(bi->targets[i].target, 48), " taken: ", intstring(bi->targets[i].taken,10) , "(", 
 					floatstring(ratio,0,4), ")" ; }
 	           	logfile << " pred accuracy: ", floatstring((double) cPredCurr / (double) totPredCurr,0,3) , endl;
-	      	}
+	      	}   
+			
+			for(int i=0;i < bi->numNextCondBranches;++i)
+			{
+			   	if(bi->nextCondBranches[i])
+			    {   
+				 	 BranchInfo* bin = bi->nextCondBranches[i];      
+					 double ratio = 0.0;
+				      if(  !bin->pred_not_taken_and_not_taken  || !bin->pred_taken_and_taken) 
+				      {
+
+				      }else if( bin->pred_not_taken_and_not_taken > bin->pred_taken_and_taken) { ratio = (double)  bin->pred_not_taken_and_not_taken / (double)  bin->pred_taken_and_taken; }
+				      else {  ratio = (double) bin->pred_taken_and_taken / (double)  bin->pred_not_taken_and_not_taken; }
+					   
+					W64 taken = bin->pred_taken_and_taken  +   bin->pred_not_taken_and_taken;  
+					W64 notTaken = bin->pred_not_taken_and_not_taken + bin->pred_taken_and_not_taken;
+					double bias = (double) ((taken > notTaken) ? taken: notTaken)/(double)(taken + notTaken);
+					W64 cPredCurr = bin->pred_taken_and_taken +  bin->pred_not_taken_and_not_taken;
+			        W64 mPredCurr = (bin->pred_taken_and_not_taken + bin->pred_not_taken_and_taken);
+			        W64 totPredCurr = cPredCurr + mPredCurr;
+			 		logfile << "\t branch addr: ", hexstring(bin->rip, 48), " PT&T: ", intstring(bin->pred_taken_and_taken,20),  " PNT&NT: ",
+			  				intstring(bin->pred_not_taken_and_not_taken,20),  " PT&NT: ",  intstring(bin->pred_taken_and_not_taken,20), " PNT&T: ", 
+							intstring(bin->pred_not_taken_and_taken,20),  " pred accuracy: ", floatstring((double) cPredCurr / (double) totPredCurr,0,3), " bias: ", floatstring(bias,0,5), endl;  
+				}  	 
+			}
+	  
 	  } 
 	  W64 totPred = cPred + mPred; 
 	  logfile << "cPred: ", cPred, " mPred: ", mPred, " pred accuracy: ", (double) cPred / (double) totPred, endl;

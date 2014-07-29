@@ -491,16 +491,23 @@ assert(operands[RS]->ready()); }
       bool ret = bit(bptype, log2(BRANCH_HINT_RET));
       BranchInfo* currBranch=null;     
       
-       if(isclass(uop.opcode, OPCLASS_INDIR_BRANCH) && uop.extshift != BRANCH_HINT_POP_RAS) {
+       if((isclass(uop.opcode, OPCLASS_INDIR_BRANCH) && uop.extshift != BRANCH_HINT_POP_RAS) || isclass(uop.opcode,OPCLASS_COND_BRANCH)) {
       	 BranchInfo** binfo = 
        	 branchHash.get(
        		uop.rip.rip);  
       	if(null == binfo)
       	{
-          BranchInfo* temp = new BranchInfo(uop.rip.rip); 
-          if( isclass(uop.opcode, OPCLASS_INDIR_BRANCH)) { temp->isIndirect = true; }
-          branchHash.add(uop.rip.rip, temp); 
-          currBranch = temp;
+          	BranchInfo* temp = new BranchInfo(uop.rip.rip); 
+          	if(isclass(uop.opcode, OPCLASS_INDIR_BRANCH))
+			{ 
+		 		temp->isIndirect = true; 
+			}   
+			else
+			{ 
+			 	temp->isIndirect = false; 
+		  	}
+          	branchHash.add(uop.rip.rip, temp); 
+          	currBranch = temp;
         }	 
     	else { currBranch = *binfo; }
       }
@@ -524,7 +531,7 @@ assert(operands[RS]->ready()); }
         //
         if likely (isclass(uop.opcode, OPCLASS_COND_BRANCH)) {
           assert(realrip == uop.ripseq);  
-#if 0
+#if 1
           if(realrip == uop.predinfo.ripafter) 
           {
                 ++currBranch->pred_taken_and_not_taken;
@@ -582,7 +589,7 @@ assert(operands[RS]->ready()); }
 
         return -1;
       } else {
-#if 0
+#if 1
        if(isclass(uop.opcode, OPCLASS_COND_BRANCH)) {
         if(uop.predinfo.ripafter == realrip)
         {

@@ -44,7 +44,8 @@ static const double threshold = 0.03f;
 static int childLen=0;
 bool had_mispredict=false;
 using namespace OutOfOrderModel;      
-static bool containsSet[ROB_SIZE];        
+static bool containsSet[ROB_SIZE];
+static BranchInfo* prevBranch=null;       
 static const bool markStoreAsNonBlocking = true;    
 typedef bool (*ExcludeRobFunc)(ReorderBufferEntry& rob);
 PhysicalRegister* lastNonBlockingPhysReg = null;
@@ -208,7 +209,8 @@ void ThreadContext::reset_fetch_unit(W64 realrip) {
     current_basic_block->release();
     current_basic_block = null;
   }
-
+   
+  prevBranch = null;
   fetchrip = realrip;
   fetchrip.update(ctx);
   stall_frontend = 0;
@@ -1182,14 +1184,29 @@ void ThreadContext::rename() {
     physreg->rob = &rob;
     physreg->archreg = rob.uop.rd;
     rob.physreg = physreg; 
-    
+    if(isclass(rob.uop.opcode,OPCLASS_COND_BRANCH))
+	{
+		BranchInfo** binfo =
+	    	branchHash.get(rob.uop.rip.rip);      
+		if(null != binfo)
+		{
+		    BranchInfo* bi = *binfo;                   
+	        if(prevBranch != null && prevBranch->isIndirect)
+	        {
+				prevBranch->update_next_cond_branch(bi);
+			}
+	
+			prevBranch = bi;
+		}
+	}
     if(isclass(rob.uop.opcode, OPCLASS_INDIR_BRANCH) && rob.uop.extshift != BRANCH_HINT_POP_RAS)
 	{
 		BranchInfo** binfo =
         branchHash.get(rob.uop.rip.rip);
 		if(null != binfo)
       	{
-          	BranchInfo* bi = *binfo;
+          	BranchInfo* bi = *binfo;  
+			prevBranch = bi;
       		W64 cPredCurr = bi->pred_taken_and_taken +  bi->pred_not_taken_and_not_taken;
       		W64 mPredCurr = (bi->pred_taken_and_not_taken + bi->pred_not_taken_and_taken);
 			W64 branchCount = bi->totalTaken;
