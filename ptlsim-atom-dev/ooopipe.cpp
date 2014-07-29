@@ -1255,8 +1255,11 @@ void ThreadContext::rename() {
 				assert(lastNonBlockingPhysReg);
 				ExcludeRobFunc funcs[]={is_rsp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store,is_opclass_mov};  
 				int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);
-			   	if(should_exclude_rob(rob,funcs,nFuncs) && lastNonBlockingPhysReg->allocated())
-				{       
+			   	if(should_exclude_rob(rob,funcs,nFuncs))
+				{        
+					rob.nb_successor = true;       
+					if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob); }     
+					#if 0
 					bool found=false;
 				    foreach (i, MAX_OPERANDS)  
 				    {
@@ -1271,7 +1274,8 @@ void ThreadContext::rename() {
 							break;
 						}
 					
-					}                      
+					}
+					#endif                       
 				}
 			}   
 			#if 0

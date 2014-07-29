@@ -321,10 +321,13 @@ int ReorderBufferEntry::issue() {
   per_context_ooocore_stats_update(threadid, issue.uops++);
 
   // fu = lsbindex(executable_on_fu);
-  // Try grabbing ALUs before LSUs
-  fu = msbindex(executable_on_fu);
-  clearbit(core.fu_avail, fu);
-  core.robs_on_fu[fu] = this;
+  // Try grabbing ALUs before LSUs    
+  if(!this->nb_successor)
+  {	
+   	fu = msbindex(executable_on_fu);
+  	clearbit(core.fu_avail, fu);
+  	core.robs_on_fu[fu] = this;
+  }
   cycles_left = fuinfo[uop.opcode].latency;
   changestate(thread.rob_issued_list[cluster]);
 
@@ -2060,14 +2063,16 @@ int OutOfOrderCore::issue(int cluster) {
 			 canSkip = false;
 		}
 		if(!canSkip)
-       	{                                                         
-	   	 //   if(containsSuccessor && lastNonBlockingPhysReg && lastNonBlockingPhysReg->allocated() && lastNonBlockingPhysReg->rob && lastNonBlockingPhysReg->rob->cluster >= 0)
+       	{  
+#if 0                                                       
+	   	    if(containsSuccessor && lastNonBlockingPhysReg && lastNonBlockingPhysReg->allocated() && lastNonBlockingPhysReg->rob && lastNonBlockingPhysReg->rob->cluster >= 0)
 		    if(containsSuccessor && foundNbJmp && oldestNbJmpRob)
 		 	{                                          
 			    if unlikely (config.event_log_enabled){ getcore().eventlog.add(EVENT_FORWARD_NONBLOCKING,oldestNbJmpRob);}     
 			    oldestNbJmpRob->forward_cycle = 0;
 			   	oldestNbJmpRob->forward();
 			}
+#endif
 			issueq_operation_on_cluster(getcore(), cluster, replay(iqslot)); 
       		break;
 		} 
@@ -2085,8 +2090,11 @@ int OutOfOrderCore::issue(int cluster) {
     rob.iqslot = iqslot;
     int rc = rob.issue();
     // Stop issuing from this cluster once something replays or has a mis-speculation
-    issuecount++;
-    if unlikely (rc <= 0) { break;}
+    if(!rob.nb_successor)
+	{
+		issuecount++;
+    }
+	if unlikely (rc <= 0) { break;}
   }
 
   per_cluster_stats_update(stats.ooocore.issue.width, cluster, [min(issuecount, MAX_ISSUE_WIDTH)]++);
