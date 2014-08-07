@@ -1274,6 +1274,9 @@ ostream& OutOfOrderCoreEvent::print(ostream& os) const {
   case EVENT_NONBLOCKING_DISPATCH_STALL:
      os << "nonblocking-dispatch-stall rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24), " nonblocking: ", nonblocking;
   break;
+  case  EVENT_MARK_NONBLOCKING_COND_BRANCH: 
+     os << "nonblocking-mark-cond-branch rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24), " nonblocking: ", nonblocking;
+  break;
   case EVENT_FOUND_NONBLOCKING_SUCCESSOR:
      os << "found-nonblocking-successor  rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24), " nonblocking: ", nonblocking;
   break;

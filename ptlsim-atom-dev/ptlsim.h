@@ -43,6 +43,7 @@ struct BranchInfo
  {
       W64 rip;
       bool isIndirect;
+      bool isNextCondBranch;
       int numTargets;
 	  int numNextCondBranches;
       W64 totalTaken;
@@ -54,7 +55,7 @@ struct BranchInfo
       W64 pred_not_taken_and_taken;
       W64 pred_not_taken_and_not_taken;
       BranchInfo() { }
-      BranchInfo(W64 rip):rip(rip) { numNextCondBranches = 0; totalTaken = 0; numTargets = 0; isIndirect = false; memset(targets,0, sizeof(IndirTargetInfo) * NUM_INDIR_TARGETS); 
+      BranchInfo(W64 rip):rip(rip) { isNextCondBranch = false; numNextCondBranches = 0; totalTaken = 0; numTargets = 0; isIndirect = false; memset(targets,0, sizeof(IndirTargetInfo) * NUM_INDIR_TARGETS); 
 									 memset(nextCondBranches,0, sizeof(BranchInfo*) * NUM_INDIR_TARGETS); 
                                      numStalls = pred_taken_and_taken = pred_taken_and_not_taken = pred_not_taken_and_taken = pred_not_taken_and_not_taken = 0; }
      void update_indirect_branch(W64 realrip) {  
@@ -71,6 +72,7 @@ struct BranchInfo
      void update_next_cond_branch(BranchInfo* branch)
      {    
 		bool found = false; 
+                branch->isNextCondBranch = true;
 		for(int i=0;i<this->numNextCondBranches;++i)
 		{
 			if(this->nextCondBranches[i] == branch) 
