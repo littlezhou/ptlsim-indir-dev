@@ -919,7 +919,62 @@ void mark_producers_with_exclude(ReorderBufferEntry& rob,W16s fIdx,ExcludeRobFun
         }
     } 
 }       
+        
 
+void record_producers_with_exclude_bounded(ReorderBufferEntry& rob,W16s fIdx,ExcludeRobFunc* funcs, int numFuncs,ReorderBufferEntry** robs,int& numMarked,int& numLoadsFound)
+{
+	W16s idx = rob.idx;   
+	
+	bool indices[ROB_SIZE]={0};
+	foreach (i, MAX_OPERANDS) 
+    {  
+    	if(rob.operands[i] && rob.operands[i]->rob)
+		{
+		   	if(!indices[rob.operands[i]->rob->idx])     
+		 	{	
+				robs[numMarked++] = rob.operands[i]->rob; 
+				indices[rob.operands[i]->rob->idx] = true;
+			}
+		}
+	}        
+	--idx;
+	if(idx < 0) { idx = ROB_SIZE-1;}          
+	while(idx != fIdx)
+	{
+		ReorderBufferEntry& rrob = rob.getthread().ROB[idx];   
+		bool found = false;
+		for(int j=0;j<numMarked;j++)
+		{
+			if(rrob.idx == robs[j]->idx)
+			{
+				found = true;         
+				if(isload(rrob.uop.opcode)) { ++numLoadsFound; }
+				break;
+			}
+			
+		}  
+		if(found)
+		{
+			foreach (i, MAX_OPERANDS) 
+	    	{  
+	    		if(rrob.operands[i] && rrob.operands[i]->rob)
+				{
+				
+					if(!indices[rrob.operands[i]->rob->idx]) 
+					{
+					 	robs[numMarked++] = rrob.operands[i]->rob;          
+						indices[rrob.operands[i]->rob->idx] = true;
+					}
+				
+                           
+				}	
+			}
+	  	} 
+	    --idx;
+		if(idx < 0) { idx = ROB_SIZE-1;}
+		          
+	}
+}
 
 void record_producers_with_exclude(ReorderBufferEntry& rob,W16s fIdx,ExcludeRobFunc* funcs, int numFuncs,ReorderBufferEntry** robs,int& numMarked,bool& foundLoad, W16s& loadIdx)
 {
@@ -938,7 +993,7 @@ void record_producers_with_exclude(ReorderBufferEntry& rob,W16s fIdx,ExcludeRobF
 				foundLoad = true;
 				loadIdx = rob.operands[i]->rob->idx;
 			}
-            if(!should_exclude_rob(*rob.operands[i]->rob,funcs,numFuncs))
+            //if(!should_exclude_rob(*rob.operands[i]->rob,funcs,numFuncs))
   			{
           	   
 			    bool found = false;
@@ -1050,11 +1105,13 @@ void simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
     W16s idx = rob.idx;     
     W64 rip = rob.uop.rip.rip; 
     ExcludeRobFunc funcs[]={is_rsp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store};  
-    int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);
+    int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);    
+	bool foundLoad = false;
     do
     {                       
        
-        ReorderBufferEntry& rrob = rob.getthread().ROB[idx];     
+        ReorderBufferEntry& rrob = rob.getthread().ROB[idx];  
+		foundLoad |= isload(rrob.uop.opcode);
         if(rrob.uop.rip.rip != rip) {  break; }   
         if(!should_exclude_rob(rrob,funcs,nFuncs))
         {     
@@ -1270,13 +1327,24 @@ void ThreadContext::rename() {
             stringbuf dir;
             double predAccuracy =   (double) cPredCurr / (double) totPredCurr;
             double bias =   (double)bi->targets[0].taken/(double)branchCount;     // we should be sorted in non-decreasing order so the first target should be the most taken
-            if(((predAccuracy >= bias+threshold) || inrange(predAccuracy,bias-threshold,bias+threshold)) && bias < .99f)
+            if((((predAccuracy >= bias+threshold) || inrange(predAccuracy,bias-threshold,bias+threshold)) && bias < .99f) || 
+				(mark_successors && 1 == bi->numTargets))
             {
                 rob.nonblocking = true;  
                 lastNonBlockingPhysReg = physreg;   
                 rob.nb_jmp = true;
                  //logfile << "marking initial producers: ", rob.idx, endl;
-                if unlikely (config.event_log_enabled){  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rob); }
+                if unlikely (config.event_log_enabled)
+				{    
+					if(mark_successors && 1 == bi->numTargets)
+					{
+						rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_INDIR_ASSERT,&rob);
+					}
+					else
+					{
+	 					rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rob); 
+					}
+				}
                 //mark_producers(rob,rob.idx,0);
                
               //  robIds.reset();     
@@ -1319,7 +1387,10 @@ void ThreadContext::rename() {
         }   
     }
     else if(mark_successors)
-    {
+    {         
+			static bool foundNextCondBranch  = false;
+			static ReorderBufferEntry* robs[256]={0};
+			static int nRobs = 0;
     		if(isclass(rob.uop.opcode,OPCLASS_COND_BRANCH)) 
          	{      
                 BranchInfo** binfo =
@@ -1329,55 +1400,89 @@ void ThreadContext::rename() {
                     BranchInfo* bi = *binfo;  
                     if(bi->isNextCondBranch)
                     {
-                        rob.nonblocking = true;
-                        if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_MARK_NONBLOCKING_COND_BRANCH,&rob); }  
+                        
+                       
 						ExcludeRobFunc funcs[]={is_opclass_load};  
 		                int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);	
 						//mark_producers_with_exclude(rob,rob.idx,funcs,nFuncs);                     
-						ReorderBufferEntry* robs[128]={0};
-						int nRobs = 0;
-						bool foundLoad = false; 
-						W16s loadIdx = -1;
-						record_producers_with_exclude(rob,rob.idx,funcs,nFuncs,robs,nRobs,foundLoad,loadIdx);    
-						if(foundLoad && ((loadIdx > lastIndirRobIdx ) && (loadIdx < rob.idx))) 
+					  	bool foundLoad = false; 
+						W16s loadIdx = -1;  
+					   	nRobs = 0;   
+						int numLoadsFound = 0;
+						record_producers_with_exclude_bounded(rob,lastIndirRobIdx,funcs,nFuncs,robs,nRobs,numLoadsFound);  
+						
+						if(numLoadsFound)
 						{
-							for(int i=0;i<nRobs;++i) 
-							{ 
-								robs[i]->nonblocking = true;
-								if unlikely (config.event_log_enabled) {  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,robs[i]); }     
-							}
-						}   
+							rob.nonblocking = true;     
+							if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_MARK_NONBLOCKING_COND_BRANCH,&rob); }  
+							int nCount=0;  
+					   		for(int i=0;i<nRobs && numLoadsFound;++i,++nCount) 
+							{                              
+									if(!isload(robs[i]->uop.opcode))
+									{
+										robs[i]->nonblocking = true;
+							  			if unlikely (config.event_log_enabled) {  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,robs[i]); }     
+							        }
+									else
+									{
+										--numLoadsFound;
+									}
+							}  
+							nRobs = nCount;
+					  		foundNextCondBranch = true;                    
+					   	}
                     }
+					else
+					{                  
+						// stop rolling here for now  
+						foundNextCondBranch = false;
+						mark_successors = false;
+					}
                 }
-                mark_successors = false; 
+               // mark_successors = false; 
             }    // stop rolling
             else
             {
                 assert(lastNonBlockingPhysReg);
                 ExcludeRobFunc funcs[]={is_rsp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store,is_opclass_mov};  
                 int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);
-                if(should_exclude_rob(rob,funcs,nFuncs))
-                {        
-                    rob.nb_successor = true;       
-                    if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob); }     
-                    #if 0
-                    bool found=false;
-                    foreach (i, MAX_OPERANDS)  
-                    {
-                        if(rob.operands[i] ==  &core.physregfiles[0][PHYS_REG_NULL])
-                        {
-                            found = true;
-                            rob.operands[i] = lastNonBlockingPhysReg;
-                            rob.operands[i]->addref(rob, threadid);     
-                            rob.nonblocking = true;  
-                            rob.nb_successor = true;
-                            if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob); } 
-                            break;
-                        }
-                    
-                    }
-                    #endif                       
+                if(!foundNextCondBranch)
+				{	
+					if(should_exclude_rob(rob,funcs,nFuncs))
+                	{        
+                    	rob.nb_successor = true;       
+                    	if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob); }     
+                      
+                    }                      
                 }
+				else
+				{                     
+					bool found = false;      
+				   
+					for(int i=0;i<nRobs;++i)
+					{       
+						foreach (j, MAX_OPERANDS) 
+				        {  
+				        	if(rob.operands[j] && rob.operands[j]->rob)
+							{  
+								if(robs[i]->idx == rob.operands[j]->rob->idx)
+							   	{
+								 	if(!should_exclude_rob(rob,funcs,nFuncs))
+									{	
+										rob.nonblocking = true;
+										robs[nRobs++] = &rob;  
+										found = true;  
+										if unlikely (config.event_log_enabled) {  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rob); }  
+										break;
+									}
+							   	}
+							
+						  	}
+						}
+						if(found) { break; }
+				  	}
+				}  		
+					   
             }   
             #if 0
             bool found=false;
