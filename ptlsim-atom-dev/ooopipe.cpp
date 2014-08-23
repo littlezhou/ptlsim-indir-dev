@@ -1397,8 +1397,12 @@ void ThreadContext::rename() {
                 branchHash.get(rob.uop.rip.rip);
                 if(null != binfo)
                 {
-                    BranchInfo* bi = *binfo;  
-                    if(bi->isNextCondBranch)
+                    BranchInfo* bi = *binfo;     
+					W64 taken = bi->pred_taken_and_taken  +   bi->pred_not_taken_and_taken;
+				    W64 notTaken = bi->pred_not_taken_and_not_taken + bi->pred_taken_and_not_taken;
+				    double bias = (double) ((taken > notTaken) ? taken: notTaken)/(double)(taken + notTaken);
+					bool fNCBandBias =   (foundNextCondBranch && bias >= 0.98f);
+                    if(bi->isNextCondBranch || fNCBandBias)
                     {
                         
                        
@@ -1414,7 +1418,17 @@ void ThreadContext::rename() {
 						if(numLoadsFound)
 						{
 							rob.nonblocking = true;     
-							if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_MARK_NONBLOCKING_COND_BRANCH,&rob); }  
+							if unlikely (config.event_log_enabled)
+							{  
+								if(fNCBandBias && !bi->isNextCondBranch)
+								{
+								  	rob.getcore().eventlog.add(EVENT_MARK_NONBLOCKING_BIAS_COND_BRANCH,&rob);    
+								}
+								else
+								{
+									rob.getcore().eventlog.add(EVENT_MARK_NONBLOCKING_COND_BRANCH,&rob); 
+						   	   	}
+							}  
 							int nCount=0;  
 					   		for(int i=0;i<nRobs && numLoadsFound;++i,++nCount) 
 							{                              
@@ -1907,7 +1921,7 @@ int ThreadContext::dispatch() {
   OutOfOrderCoreEvent* event;
   ReorderBufferEntry* rob;      
  
-static const int NUM_NONBLOCKING_BRANCHES = 3; // FIXME: originally set as 2                  
+static const int NUM_NONBLOCKING_BRANCHES = 8; // FIXME: originally set as 2                  
 int count=NUM_NONBLOCKING_BRANCHES;
   foreach_list_mutable(rob_ready_to_dispatch_list, rob, entry, nextentry) {
     if unlikely (core.dispatchcount >= DISPATCH_WIDTH) break;
