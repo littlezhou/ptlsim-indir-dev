@@ -2066,8 +2066,12 @@ int OutOfOrderCore::issue(int cluster) {
 		}
 		else 
 		{
-             if unlikely (config.event_log_enabled){ getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_READY,&rob);}
-			 canSkip = false;
+             if unlikely (config.event_log_enabled){ getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_READY,&rob);} 
+			 if(isload(rob.uop.opcode))
+			 {
+				canSkip = true;
+			 }   
+			 else { canSkip =  false; } // FIXME: figure out how dynamic the above is
 		}
 		if(!canSkip)
        	{  

@@ -1921,7 +1921,7 @@ int ThreadContext::dispatch() {
   OutOfOrderCoreEvent* event;
   ReorderBufferEntry* rob;      
  
-static const int NUM_NONBLOCKING_BRANCHES = 8; // FIXME: originally set as 2                  
+static const int NUM_NONBLOCKING_BRANCHES = 12; // FIXME: originally set as 2                  
 int count=NUM_NONBLOCKING_BRANCHES;
   foreach_list_mutable(rob_ready_to_dispatch_list, rob, entry, nextentry) {
     if unlikely (core.dispatchcount >= DISPATCH_WIDTH) break;
