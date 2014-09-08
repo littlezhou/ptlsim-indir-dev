@@ -1,0 +1,366 @@
+//  
+//  PTLsim: Cycle Accurate x86-64 Simulator
+//  Copyright 1999-2007 Matt T. Yourst <yourst@yourst.com>
+// 
+//  Revision 0 (unknown)
+//  Built Sep  8 2014 17:10:04 on freya.cs.uiuc.edu using gcc-4.1
+//  Running on freya.cs.uiuc.edu.zilles
+//  
+//  Arguments: /bin/ls
+//  Thread 27537 is running in 64-bit x86-64 mode
+//  
+
+Active parameters:
+  -core         ooo
+  -quiet        disabled
+  -logfile      ptlsim.log
+  -loglevel     0
+  -startlog     0
+  -startlogrip  -1
+  -consolelog   disabled
+  -bootlog      disabled
+  -logbufsize   524288
+  -dump-state-now disabled
+  -abort-at-end disabled
+  -mm-logfile   
+  -mm-logbuf-size 16384
+  -mm-log-inline disabled
+  -mm-validate  disabled
+  -ringbuf      disabled
+  -ringbuf-size 32768
+  -flush-events disabled
+  -ringbuf-trigger-rip -1
+  -ringbuf-trigger-virt-start 0
+  -ringbuf-trigger-virt-end 0
+  -stats        
+  -snapshot-cycles infinity
+  -snapshot-now 
+  -startrip     -1
+  -excludeld    enabled
+  -trigger      disabled
+  -pause-at-startup 0
+  -stopinsns    infinity
+  -stopcycle    infinity
+  -stopiter     infinity
+  -stoprip      -1
+  -stop-at-marker infinity
+  -stop-at-marker-hits infinity
+  -stopinsns-rel infinity
+  -bbinsns      65536
+  -flushevery   infinity
+  -kill-after-run disabled
+  -validate     disabled
+  -validate-start-cycle 0
+  -perfect-cache disabled
+  -dumpcode     test.dat
+  -dump-at-end  disabled
+  -overshoot-and-dump disabled
+  -bbdump       
+  -seq          0
+  -exitend      disabled
+Active parameters:
+  -core         ooo
+  -quiet        disabled
+  -logfile      ptlsim.log
+  -loglevel     0
+  -startlog     0
+  -startlogrip  -1
+  -consolelog   disabled
+  -bootlog      disabled
+  -logbufsize   524288
+  -dump-state-now disabled
+  -abort-at-end disabled
+  -mm-logfile   
+  -mm-logbuf-size 16384
+  -mm-log-inline disabled
+  -mm-validate  disabled
+  -ringbuf      disabled
+  -ringbuf-size 32768
+  -flush-events disabled
+  -ringbuf-trigger-rip -1
+  -ringbuf-trigger-virt-start 0
+  -ringbuf-trigger-virt-end 0
+  -stats        
+  -snapshot-cycles infinity
+  -snapshot-now 
+  -startrip     -1
+  -excludeld    enabled
+  -trigger      disabled
+  -pause-at-startup 0
+  -stopinsns    infinity
+  -stopcycle    infinity
+  -stopiter     infinity
+  -stoprip      -1
+  -stop-at-marker infinity
+  -stop-at-marker-hits infinity
+  -stopinsns-rel infinity
+  -bbinsns      65536
+  -flushevery   infinity
+  -kill-after-run disabled
+  -validate     disabled
+  -validate-start-cycle 0
+  -perfect-cache disabled
+  -dumpcode     test.dat
+  -dump-at-end  disabled
+  -overshoot-and-dump disabled
+  -bbdump       
+  -seq          0
+  -exitend      disabled
+loader: interp_entry 0x3348e00a70, program_entry 0x402460
+
+Breakpoint inserted at rip 0x3348e00a70
+
+=== Preparing to switch to native mode at rip 0x3348e00a70 ===
+
+Final state:
+VCPU State:
+  Architectural Registers:
+  rax    0x0000000000000000  rcx    0x0000000000000000  rdx    0x0000000000000000  rbx    0x0000000000000000
+  rsp    0x00007fffc45b5a60  rbp    0x0000000000000000  rsi    0x0000000000000000  rdi    0x0000000000000000
+  r8     0x0000000000000000  r9     0x0000000000000000  r10    0x0000000000000000  r11    0x0000000000000000
+  r12    0x0000000000000000  r13    0x0000000000000000  r14    0x0000000000000000  r15    0x0000000000000000
+  xmml0  0x0000000000000000  xmmh0  0x0000000000000000  xmml1  0x0000000000000000  xmmh1  0x0000000000000000
+  xmml2  0x0000000000000000  xmmh2  0x0000000000000000  xmml3  0x0000000000000000  xmmh3  0x0000000000000000
+  xmml4  0x0000000000000000  xmmh4  0x0000000000000000  xmml5  0x0000000000000000  xmmh5  0x0000000000000000
+  xmml6  0x0000000000000000  xmmh6  0x0000000000000000  xmml7  0x0000000000000000  xmmh7  0x0000000000000000
+  xmml8  0x0000000000000000  xmmh8  0x0000000000000000  xmml9  0x0000000000000000  xmmh9  0x0000000000000000
+  xmml10 0x0000000000000000  xmmh10 0x0000000000000000  xmml11 0x0000000000000000  xmmh11 0x0000000000000000
+  xmml12 0x0000000000000000  xmmh12 0x0000000000000000  xmml13 0x0000000000000000  xmmh13 0x0000000000000000
+  xmml14 0x0000000000000000  xmmh14 0x0000000000000000  xmml15 0x0000000000000000  xmmh15 0x0000000000000000
+  fptos  0x0000000000000000  fpsw   0x0000000000000000  fptags 0x0000000000000000  fpstack 0x00000000701312a0
+  msr    0x0000000000000000  dlptr  0x0000000000000000  trace  0x0000000000000000  ctx    0x0000000070131000
+  rip    0x0000003348e00a70  flags  0x0000000000000000  dlend  0x0000000000000000  selfrip 0x0000000000000000
+  nextrip 0x0000000000000000  ar1    0x0000000000000000  ar2    0x0000000000000000  zero   0x0000000000000000
+  Segment Registers:
+    cs 0x0033: base 0000000000000000, limit 00000000ffffffff, ring 0: usr            
+    ss 0x002b: base 0000000000000000, limit 00000000ffffffff, ring 0: usr            
+    ds 0x0000: base 0000000000000000, limit 00000000ffffffff, ring 0: usr            
+    es 0x0000: base 0000000000000000, limit 00000000ffffffff, ring 0: usr            
+    fs 0x0000: base 0000000000000000, limit 00000000ffffffff, ring 0: usr            
+    gs 0x0000: base 0000000000000000, limit 00000000ffffffff, ring 0: usr            
+  FPU:
+    FP Control Word: 0x0000037f
+    MXCSR:           0x00001f80
+    fp7  st(7)  Empty  0x0000000000000000 => 0.0
+    fp6  st(6)  Empty  0x0000000000000000 => 0.0
+    fp5  st(5)  Empty  0x0000000000000000 => 0.0
+    fp4  st(4)  Empty  0x0000000000000000 => 0.0
+    fp3  st(3)  Empty  0x0000000000000000 => 0.0
+    fp2  st(2)  Empty  0x0000000000000000 => 0.0
+    fp1  st(1)  Empty  0x0000000000000000 => 0.0
+    fp0  st(0)  Empty  0x0000000000000000 => 0.0
+  Internal State:
+    Last internal exception: 0x0000000000000000 (NoException)
+
+=== Switching to native mode at rip 0x3348e00a70 ===
+
+
+=== Removed thunk patch at rip 0x3348e00a70 ===
+
+=== Switching to simulation mode at rip 0x3348e00a70 ===
+
+stack_min_addr: 0x7fffc3bc6000
+stack_max_addr: 0x7fffc45b6000
+init_stack_min_addr: 0x7fffc45b5a60
+resync_with_process_maps: found 29 memory map extents:
+  arwxp-              0x10000               16 KB 
+  -r-xp-             0x400000               80 KB          0 in 253.0.2293823
+  -rwxp-             0x613000               12 KB 0x0000000000013000 in 253.0.2293823
+  arwxp-           0x40c18000                4 KB 
+  arwxp-           0x40d04000                8 KB 
+  arwxp-           0x41dd4000                4 KB 
+  -rwxp-           0x70000000             1300 KB          0 in 253.5.119832841
+  arwxp-           0x70145000              864 KB 
+  -rwxsz           0x74000000             4096 KB          0 in 0.9.42697649
+  -rwxp-         0x3348e00000                8 KB          0 in 253.0.2097342
+  -r-xp-         0x3348e02000              104 KB 0x0000000000002000 in 253.0.2097342
+  -rwxp-         0x334901c000                8 KB 0x000000000001c000 in 253.0.2097342
+  -rwxsz       0x2aaaaaaab000              132 KB          0 in 0.9.42697653
+  -rwxsz       0x2aaaaaacc000               68 KB          0 in 0.9.42697654
+  -rwxsz       0x2aaaaaadd000               68 KB          0 in 0.9.42697655
+  -rwxsz       0x2aaaaaaee000              132 KB          0 in 0.9.42697656
+  -rwxsz       0x2aaaaab0f000              516 KB          0 in 0.9.42697661
+  -rwxsz       0x2aaaaab90000             1024 KB          0 in 0.9.42697662
+  -rwxsz       0x2aaaaac90000             1024 KB          0 in 0.9.42697663
+  -rwxsz       0x2aaaaad90000             1024 KB          0 in 0.9.42697664
+  -rwxsz       0x2aaaaae90000             1024 KB          0 in 0.9.42697665
+  -rwxsz       0x2aaaaaf90000             1024 KB          0 in 0.9.42697666
+  -rwxsz       0x2aaaab090000             1024 KB          0 in 0.9.42697667
+  -rwxsz       0x2aaaab190000             1024 KB          0 in 0.9.42697668
+  -rwxsz       0x2aaaab290000             3072 KB          0 in 0.9.42697669
+  -rwxsz       0x2aaaab590000            16384 KB          0 in 0.9.42697670
+  arw-pS       0x7fffc3bc5000            10184 KB 
+  ar-xpv       0x7fffc45fd000                4 KB 
+  a---p-   0xffffffffff600000             8192 KB 
+setattr: region 0x10000 to 0x14000 (16 KB) has user-visible attributes rwx
+setattr: region 0x400000 to 0x414000 (80 KB) has user-visible attributes r-x
+setattr: region 0x613000 to 0x616000 (12 KB) has user-visible attributes rwx
+setattr: region 0x40c18000 to 0x40c19000 (4 KB) has user-visible attributes rwx
+setattr: region 0x40d04000 to 0x40d06000 (8 KB) has user-visible attributes rwx
+setattr: region 0x41dd4000 to 0x41dd5000 (4 KB) has user-visible attributes rwx
+setattr: region 0x70000000 to 0x70145000 (1300 KB) has user-visible attributes rwx
+setattr: region 0x70145000 to 0x7021d000 (864 KB) has user-visible attributes rwx
+setattr: region 0x74000000 to 0x74400000 (4096 KB) has user-visible attributes ---
+setattr: region 0x3348e00000 to 0x3348e02000 (8 KB) has user-visible attributes rwx
+setattr: region 0x3348e02000 to 0x3348e1c000 (104 KB) has user-visible attributes r-x
+setattr: region 0x334901c000 to 0x334901e000 (8 KB) has user-visible attributes rwx
+setattr: region 0x2aaaaaaab000 to 0x2aaaaaacc000 (132 KB) has user-visible attributes ---
+setattr: region 0x2aaaaaacc000 to 0x2aaaaaadd000 (68 KB) has user-visible attributes ---
+setattr: region 0x2aaaaaadd000 to 0x2aaaaaaee000 (68 KB) has user-visible attributes ---
+setattr: region 0x2aaaaaaee000 to 0x2aaaaab0f000 (132 KB) has user-visible attributes ---
+setattr: region 0x2aaaaab0f000 to 0x2aaaaab90000 (516 KB) has user-visible attributes ---
+setattr: region 0x2aaaaab90000 to 0x2aaaaac90000 (1024 KB) has user-visible attributes ---
+setattr: region 0x2aaaaac90000 to 0x2aaaaad90000 (1024 KB) has user-visible attributes ---
+setattr: region 0x2aaaaad90000 to 0x2aaaaae90000 (1024 KB) has user-visible attributes ---
+setattr: region 0x2aaaaae90000 to 0x2aaaaaf90000 (1024 KB) has user-visible attributes ---
+setattr: region 0x2aaaaaf90000 to 0x2aaaab090000 (1024 KB) has user-visible attributes ---
+setattr: region 0x2aaaab090000 to 0x2aaaab190000 (1024 KB) has user-visible attributes ---
+setattr: region 0x2aaaab190000 to 0x2aaaab290000 (1024 KB) has user-visible attributes ---
+setattr: region 0x2aaaab290000 to 0x2aaaab590000 (3072 KB) has user-visible attributes ---
+setattr: region 0x2aaaab590000 to 0x2aaaac590000 (16384 KB) has user-visible attributes ---
+setattr: region 0x7fffc3bc5000 to 0x7fffc45b7000 (10184 KB) has user-visible attributes rw-
+setattr: region 0x7fffc45fd000 to 0x7fffc45fe000 (4 KB) has user-visible attributes r-x
+setattr: region 0xffffffffff600000 to 0xffffffffffe00000 (8192 KB) has user-visible attributes ---
+setattr: region 0x70000000 to 0x80000000 (262144 KB) has user-visible attributes ---
+Baseline state:
+VCPU State:
+  Architectural Registers:
+  rax    0x0000000000000000  rcx    0x0000000000000000  rdx    0x0000000000000000  rbx    0x0000000000000000
+  rsp    0x00007fffc45b5a60  rbp    0x0000000000000000  rsi    0x0000000000000000  rdi    0x0000000000000000
+  r8     0x0000000000000000  r9     0x0000000000000000  r10    0x0000000000000000  r11    0x0000000000000000
+  r12    0x0000000000000000  r13    0x0000000000000000  r14    0x0000000000000000  r15    0x0000000000000000
+  xmml0  0x0000000000000000  xmmh0  0x0000000000000000  xmml1  0x0000000000000000  xmmh1  0x0000000000000000
+  xmml2  0x0000000000000000  xmmh2  0x0000000000000000  xmml3  0x0000000000000000  xmmh3  0x0000000000000000
+  xmml4  0x0000000000000000  xmmh4  0x0000000000000000  xmml5  0x0000000000000000  xmmh5  0x0000000000000000
+  xmml6  0x0000000000000000  xmmh6  0x0000000000000000  xmml7  0x0000000000000000  xmmh7  0x0000000000000000
+  xmml8  0x0000000000000000  xmmh8  0x0000000000000000  xmml9  0x0000000000000000  xmmh9  0x0000000000000000
+  xmml10 0x0000000000000000  xmmh10 0x0000000000000000  xmml11 0x0000000000000000  xmmh11 0x0000000000000000
+  xmml12 0x0000000000000000  xmmh12 0x0000000000000000  xmml13 0x0000000000000000  xmmh13 0x0000000000000000
+  xmml14 0x0000000000000000  xmmh14 0x0000000000000000  xmml15 0x0000000000000000  xmmh15 0x0000000000000000
+  fptos  0x0000000000000000  fpsw   0x0000000000000000  fptags 0x0000000000000000  fpstack 0x00000000701312a0
+  msr    0x0000000000000000  dlptr  0x0000000000000000  trace  0x0000000000000000  ctx    0x0000000070131000
+  rip    0x0000003348e00a70  flags  0x0000000000000000  dlend  0x0000000000000202  selfrip 0x0000000000000000
+  nextrip 0x0000000000000000  ar1    0x0000000000000000  ar2    0x0000000000000000  zero   0x0000000000000000
+  Segment Registers:
+    cs 0x0033: base 0000000000000000, limit ffffffffffffffff, ring 0: usr            
+    ss 0x002b: base 0000000000000000, limit ffffffffffffffff, ring 0: usr            
+    ds 0x0000: base 0000000000000000, limit ffffffffffffffff, ring 0: usr            
+    es 0x0000: base 0000000000000000, limit ffffffffffffffff, ring 0: usr            
+    fs 0x0000: base 0000000000000000, limit ffffffffffffffff, ring 0: usr            
+    gs 0x0000: base 0000000000000000, limit ffffffffffffffff, ring 0: usr            
+  FPU:
+    FP Control Word: 0x0000037f
+    MXCSR:           0x00001f80
+    fp7  st(7)  Empty  0x0000000000000000 => 0.0
+    fp6  st(6)  Empty  0x0000000000000000 => 0.0
+    fp5  st(5)  Empty  0x0000000000000000 => 0.0
+    fp4  st(4)  Empty  0x0000000000000000 => 0.0
+    fp3  st(3)  Empty  0x0000000000000000 => 0.0
+    fp2  st(2)  Empty  0x0000000000000000 => 0.0
+    fp1  st(1)  Empty  0x0000000000000000 => 0.0
+    fp0  st(0)  Empty  0x0000000000000000 => 0.0
+  Internal State:
+    Last internal exception: 0x0000000000000000 (NoException)
+Initializing core 'ooo'
+Switching to simulation core 'ooo'...
+Stopping after 9223372036854775807 commits
+Starting out-of-order core toplevel loop
+Start logging at level 0 in cycle 0
+IssueQueue states:
+Completed             0 cycles,             0 commits:         0 Hz,         0 insns/sec: rip 0x3348e00a70                                                      
+setbrk(0): returning current brk 0x63ff000
+setattr: region 0x2aaaab3ae000 to 0x2aaaab3af000 (4 KB) has user-visible attributes rw-
+setattr: region 0x2aaaab3cf000 to 0x2aaaab3d0000 (4 KB) has user-visible attributes rw-
+setattr: region 0x334ca00000 to 0x334cc09000 (2084 KB) has user-visible attributes r-x
+mmap(0x334ca00000, 2134016, 5, 2050, 4, 0): mapping beyond end of file: file ends at byte 57344 but mapping ends at byte 2134016 (2076672 bytes marked invalid starting at 0x334ca0e000)
+setattr: region 0x334ca0e000 to 0x334cc09000 (2028 KB) has user-visible attributes ---
+setattr: region 0x334ca07000 to 0x334cc07000 (2048 KB) has user-visible attributes ---
+setattr: region 0x334cc07000 to 0x334cc09000 (8 KB) has user-visible attributes rw-
+setattr: region 0x3356400000 to 0x3356606000 (2072 KB) has user-visible attributes r-x
+mmap(0x3356400000, 2121728, 5, 2050, 4, 0): mapping beyond end of file: file ends at byte 28672 but mapping ends at byte 2121728 (2093056 bytes marked invalid starting at 0x3356407000)
+setattr: region 0x3356407000 to 0x3356606000 (2044 KB) has user-visible attributes ---
+setattr: region 0x3356406000 to 0x3356605000 (2044 KB) has user-visible attributes ---
+setattr: region 0x3356605000 to 0x3356606000 (4 KB) has user-visible attributes rw-
+Completed        108843 cycles,         28233 commits:    544210 Hz,    141163 insns/sec: rip 0x3348e052c2                                                      
+setattr: region 0x3352800000 to 0x3352a18000 (2144 KB) has user-visible attributes r-x
+mmap(0x3352800000, 2195456, 5, 2050, 4, 0): mapping beyond end of file: file ends at byte 98304 but mapping ends at byte 2195456 (2097152 bytes marked invalid starting at 0x3352818000)
+setattr: region 0x3352818000 to 0x3352a18000 (2048 KB) has user-visible attributes ---
+setattr: region 0x3352815000 to 0x3352a15000 (2048 KB) has user-visible attributes ---
+setattr: region 0x3352a15000 to 0x3352a17000 (8 KB) has user-visible attributes rw-
+setattr: region 0x3352a17000 to 0x3352a18000 (4 KB) has user-visible attributes rw-
+setattr: region 0x2aaaab3d0000 to 0x2aaaab3d1000 (4 KB) has user-visible attributes rw-
+setattr: region 0x3349200000 to 0x3349559000 (3428 KB) has user-visible attributes r-x
+mmap(0x3349200000, 3510272, 5, 2050, 4, 0): mapping beyond end of file: file ends at byte 1728512 but mapping ends at byte 3510272 (1781760 bytes marked invalid starting at 0x33493a6000)
+setattr: region 0x33493a6000 to 0x3349559000 (1740 KB) has user-visible attributes ---
+setattr: region 0x334934f000 to 0x334954f000 (2048 KB) has user-visible attributes ---
+setattr: region 0x334954f000 to 0x3349554000 (20 KB) has user-visible attributes rw-
+setattr: region 0x3349554000 to 0x3349559000 (20 KB) has user-visible attributes rw-
+setattr: region 0x334a200000 to 0x334a41c000 (2160 KB) has user-visible attributes r-x
+mmap(0x334a200000, 2211840, 5, 2050, 4, 0): mapping beyond end of file: file ends at byte 151552 but mapping ends at byte 2211840 (2060288 bytes marked invalid starting at 0x334a225000)
+setattr: region 0x334a225000 to 0x334a41c000 (2012 KB) has user-visible attributes ---
+setattr: region 0x334a216000 to 0x334a416000 (2048 KB) has user-visible attributes ---
+setattr: region 0x334a416000 to 0x334a418000 (8 KB) has user-visible attributes rw-
+setattr: region 0x334a418000 to 0x334a41c000 (16 KB) has user-visible attributes rw-
+setattr: region 0x3357000000 to 0x3357204000 (2064 KB) has user-visible attributes r-x
+mmap(0x3357000000, 2113536, 5, 2050, 4, 0): mapping beyond end of file: file ends at byte 20480 but mapping ends at byte 2113536 (2093056 bytes marked invalid starting at 0x3357005000)
+setattr: region 0x3357005000 to 0x3357204000 (2044 KB) has user-visible attributes ---
+setattr: region 0x3357004000 to 0x3357203000 (2044 KB) has user-visible attributes ---
+setattr: region 0x3357203000 to 0x3357204000 (4 KB) has user-visible attributes rw-
+setattr: region 0x2aaaab3d1000 to 0x2aaaab3d2000 (4 KB) has user-visible attributes rw-
+setattr: region 0x3349a00000 to 0x3349c04000 (2064 KB) has user-visible attributes r-x
+mmap(0x3349a00000, 2113536, 5, 2050, 4, 0): mapping beyond end of file: file ends at byte 24576 but mapping ends at byte 2113536 (2088960 bytes marked invalid starting at 0x3349a06000)
+setattr: region 0x3349a06000 to 0x3349c04000 (2040 KB) has user-visible attributes ---
+setattr: region 0x3349a02000 to 0x3349c02000 (2048 KB) has user-visible attributes ---
+setattr: region 0x3349c02000 to 0x3349c04000 (8 KB) has user-visible attributes rw-
+setattr: region 0x3352c00000 to 0x3352e46000 (2328 KB) has user-visible attributes r-x
+mmap(0x3352c00000, 2383872, 5, 2050, 4, 0): mapping beyond end of file: file ends at byte 249856 but mapping ends at byte 2383872 (2134016 bytes marked invalid starting at 0x3352c3d000)
+setattr: region 0x3352c3d000 to 0x3352e46000 (2084 KB) has user-visible attributes ---
+setattr: region 0x3352c3b000 to 0x3352e3b000 (2048 KB) has user-visible attributes ---
+setattr: region 0x3352e3b000 to 0x3352e3c000 (4 KB) has user-visible attributes rw-
+setattr: region 0x3352e3c000 to 0x3352e46000 (40 KB) has user-visible attributes rw-
+Completed        180493 cycles,         63898 commits:    358246 Hz,    178323 insns/sec: rip 0x3348e0d0f9                                                      
+setattr: region 0x2aaaab3e2000 to 0x2aaaab3e3000 (4 KB) has user-visible attributes rw-
+setattr: region 0x2aaaab3e3000 to 0x2aaaab3e4000 (4 KB) has user-visible attributes rw-
+arch_prctl: set FS base to 0x2aaaab3e2ca0
+setattr: region 0x334cc07000 to 0x334cc08000 (4 KB) has user-visible attributes r--
+setattr: region 0x334954f000 to 0x3349553000 (16 KB) has user-visible attributes r--
+setattr: region 0x334a416000 to 0x334a417000 (4 KB) has user-visible attributes r--
+setattr: region 0x334901c000 to 0x334901d000 (4 KB) has user-visible attributes r--
+setattr: region 0x3349c02000 to 0x3349c03000 (4 KB) has user-visible attributes r--
+handle_syscall: signal(32, 0x7fffc45b5820)
+handle_syscall: signal(33, 0x7fffc45b5820)
+Completed        295557 cycles,         94728 commits:    575319 Hz,    154149 insns/sec: rip 0x3349309d74                                                      
+Completed        426754 cycles,        119607 commits:    655984 Hz,    124394 insns/sec: rip 0x3349309d74                                                      
+setbrk(0): returning current brk 0x63ff000
+setattr: region 0x63ff000 to 0x63ff000 (0 KB) has user-visible attributes ---
+setbrk(0x6420000): old range 0x63ff000-0x63ff000 (0 bytes); new range 0x63ff000-0x6420000 (delta 135168, size 135168)
+setbrk(0x6420000): expanding: new range 0x63ff000-0x6420000 (size 135168)
+setattr: region 0x63ff000 to 0x6420000 (132 KB) has user-visible attributes rwx
+Completed        565587 cycles,        144921 commits:    694164 Hz,    126569 insns/sec: rip 0x33492c6aa0                                                      
+setattr: region 0x2aaaab3e4000 to 0x2aaaab3e5000 (4 KB) has user-visible attributes rw-
+setattr: region 0x2aaaab3e4000 to 0x2aaaab3e5000 (4 KB) has user-visible attributes ---
+Completed        654818 cycles,        180539 commits:    446154 Hz,    178089 insns/sec: rip 0x3349243d19                                                      
+setattr: region 0x2aaaab3f4000 to 0x2aaaab3f5000 (4 KB) has user-visible attributes rw-
+setattr: region 0x2aaaab3f4000 to 0x2aaaab3f5000 (4 KB) has user-visible attributes ---
+Completed        757741 cycles,        215061 commits:    514613 Hz,    172609 insns/sec: rip 0x3349279ebc                                                      
+Completed        826510 cycles,        258749 commits:    343844 Hz,    218439 insns/sec: rip 0x403e8a                                                          
+setattr: region 0x2aaaab3f4000 to 0x2aaaab3f5000 (4 KB) has user-visible attributes rw-
+setattr: region 0x2aaaab3f4000 to 0x2aaaab3f5000 (4 KB) has user-visible attributes ---
+Completed        922198 cycles,        291989 commits:    478430 Hz,    166196 insns/sec: rip 0x33492323d7                                                      
+Completed        977037 cycles,        329410 commits:    274193 Hz,    187104 insns/sec: rip 0x334927d15c                                                      
+Completed       1041518 cycles,        370398 commits:    322403 Hz,    204939 insns/sec: rip 0x404ca3                                                          
+Completed       1154138 cycles,        413909 commits:    563094 Hz,    217552 insns/sec: rip 0x404d43                                                          
+Completed       1270267 cycles,        456554 commits:    580642 Hz,    213224 insns/sec: rip 0x404a62                                                          
+Completed       1385444 cycles,        501605 commits:    575884 Hz,    225254 insns/sec: rip 0x40b000                                                          
+Completed       1494131 cycles,        547778 commits:    543429 Hz,    230862 insns/sec: rip 0x40ae35                                                          
+Completed       1598630 cycles,        594680 commits:    522492 Hz,    234508 insns/sec: rip 0x404d75                                                          
+setattr: region 0x2aaaab3f4000 to 0x2aaaab3f5000 (4 KB) has user-visible attributes rw-
+Completed       1699025 cycles,        642713 commits:    501973 Hz,    240164 insns/sec: rip 0x334926a01b                                                      
+Completed       1792144 cycles,        692292 commits:    465592 Hz,    247893 insns/sec: rip 0x3349228714                                                      
+Completed       1885397 cycles,        742599 commits:    466263 Hz,    251534 insns/sec: rip 0x404a2e                                                          
+Completed       1979153 cycles,        792762 commits:    468779 Hz,    250814 insns/sec: rip 0x40afc0                                                          
+setattr: region 0x2aaaab3f4000 to 0x2aaaab3f5000 (4 KB) has user-visible attributes ---
+handle_syscall at iteration 2026698: exit_group(): exiting with arg 0...
+user_process_terminated(rc = 0): initiating shutdown at 2026698 cycles, 807093 commits...
+PTLsim exiting...
+Flushing basic block cache at 2026698 cycles, 807093 commits:
