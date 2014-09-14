@@ -571,7 +571,10 @@ bool ThreadContext::fetch() {
       // SMP/SMT: Fill in with target thread ID (if the predictor supports this):
       transop.predinfo.ctxid = 0;
       transop.predinfo.ripafter = fetchrip + transop.bytes;
-      predrip = branchpred.predict(transop.predinfo, transop.predinfo.bptype, transop.predinfo.ripafter, transop.riptaken);
+      logfile << "before predict", endl;
+      predrip = branchpred.predict(transop.predinfo, transop.predinfo.bptype, transop.predinfo.ripafter, transop.riptaken);  
+      logfile << "predrip: ", predrip, endl;
+      //mypred.FetchHistoryUpdate(transop.predinfo.ripafter & 0x3ffff, transop.predinfo.bptype, predrip != transop.predinfo.ripafter, predrip & 0x7f);
       redirectrip = 1;
       per_context_ooocore_stats_update(threadid, branchpred.predictions++);
     }

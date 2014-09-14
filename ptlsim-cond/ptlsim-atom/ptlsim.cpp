@@ -21,7 +21,6 @@
 PTLsimConfig config;
 ConfigurationParser<PTLsimConfig> configparser;
 PTLsimStats stats;
-
 ostream logfile;
 bool logenable = 0;
 W64 sim_cycle = 0;

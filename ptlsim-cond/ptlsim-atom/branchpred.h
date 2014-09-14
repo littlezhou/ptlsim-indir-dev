@@ -11,13 +11,15 @@
 #ifndef _BRANCHPRED_H_
 #define _BRANCHPRED_H_
 
-#include <ptlsim.h>
+#include <ptlsim.h>   
 
 #define BRANCH_HINT_UNCOND      0
 #define BRANCH_HINT_COND        (1 << 0)
 #define BRANCH_HINT_INDIRECT    (1 << 1)
 #define BRANCH_HINT_CALL        (1 << 2)
 #define BRANCH_HINT_RET         (1 << 3)
+#define INCLUDEPRED
+#include "predictor.h"
 
 struct ReturnAddressStackEntry {
   int idx;
@@ -61,8 +63,7 @@ struct BranchPredictorImplementation;
 struct BranchPredictorInterface {
   // Pointer to private implementation:
   BranchPredictorImplementation* impl;
-
-  BranchPredictorInterface() { impl = null; }
+  BranchPredictorInterface() {  impl = null; }
   void init();
   void reset();
   void destroy();

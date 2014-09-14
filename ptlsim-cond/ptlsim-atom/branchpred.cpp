@@ -11,6 +11,8 @@
 #include <branchpred.h>
 #include <stats.h>
 
+static my_predictor mypred;
+static bool has_init=false;
 template <int SIZE>
 struct BimodalPredictor {
   array<byte, SIZE> table;
@@ -394,7 +396,8 @@ struct CombinedPredictor {
 struct BranchPredictorImplementation: public CombinedPredictor<65536, 65536, 1, 65536, 16, 1, 1024, 4, 1024> { };
 
 void BranchPredictorInterface::destroy() {
-  if (impl) delete impl;
+  if (impl) delete impl;    
+  //mypred = null;
   impl = null;
 }
 
@@ -404,15 +407,31 @@ void BranchPredictorInterface::reset() {
 
 void BranchPredictorInterface::init() {
   destroy();
-  impl = new BranchPredictorImplementation();
+  if(!has_init)
+  { mypred.init();
+     has_init = true;
+  }
+  impl = new BranchPredictorImplementation();  
   reset();
 }
 
-W64 BranchPredictorInterface::predict(PredictorUpdate& update, int type, W64 branchaddr, W64 target) {
-  return impl->predict(update, type, branchaddr, target);
+W64 BranchPredictorInterface::predict(PredictorUpdate& update, int type, W64 branchaddr, W64 target) { 
+  update.flags = type;  
+  logfile << "before this predict", endl;
+  
+  if(type & BRANCH_HINT_COND)
+  {
+     logfile << "mypred predict, branchaddr: ", branchaddr, endl;
+     bool taken = mypred.predict_brcond(branchaddr & 0x3ffff, type);  
+     if(taken) { return target; }
+     else { return branchaddr;}
+  } 
+  else { return impl->predict(update, type, branchaddr, target); }
 }
 
-void BranchPredictorInterface::update(PredictorUpdate& update, W64 branchaddr, W64 target) {
+void BranchPredictorInterface::update(PredictorUpdate& update, W64 branchaddr, W64 target) {    
+  logfile << "updating", endl; 
+  mypred.update_brcond(branchaddr & 0x3ffff, update.flags, branchaddr != target, target & 0x7f);
   impl->update(update, branchaddr, target);
 }
 

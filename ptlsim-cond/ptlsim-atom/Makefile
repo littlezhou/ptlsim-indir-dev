@@ -53,7 +53,7 @@ INCFLAGS += -DPTLSIM_HYPERVISOR -D__XEN__
 endif
 
 ifdef __x86_64__
-CFLAGS =  -m64 -O3  -fomit-frame-pointer -pipe -march=k8 -falign-functions=16 -funroll-loops -funit-at-a-time -minline-all-stringops
+CFLAGS =  -m64 -O2 -g  -fomit-frame-pointer -pipe -march=k8 -falign-functions=16 -funroll-loops -funit-at-a-time -minline-all-stringops
 #CFLAGS = -O2 -g3 -march=k8 -falign-functions=16 -minline-all-stringops
 # -O1 doesn't work
 CFLAGS32BIT = $(CFLAGS) -m32
