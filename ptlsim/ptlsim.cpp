@@ -617,7 +617,6 @@ void output_branch_info()
 			{    
 				double ratio =   100*(double)((double) bi->targets[i].taken/(double) bi->totalTaken);   
 			   
-				//cout.flush();
 		   		logfile <<  " target: " ,  hexstring(bi->targets[i].target, 48), " taken: ", intstring(bi->targets[i].taken,10) , "(", 
 					floatstring(ratio,0,4), ")" ; }
 	           	logfile << " pred accuracy: ", floatstring((double) cPredCurr / (double) totPredCurr,0,3) , endl;

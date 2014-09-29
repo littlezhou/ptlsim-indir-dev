@@ -1328,7 +1328,7 @@ void ThreadContext::rename() {
             double predAccuracy =   (double) cPredCurr / (double) totPredCurr;
             double bias =   (double)bi->targets[0].taken/(double)branchCount;     // we should be sorted in non-decreasing order so the first target should be the most taken
             if((((predAccuracy >= bias+threshold) || inrange(predAccuracy,bias-threshold,bias+threshold)) && bias < .99f) || 
-				(mark_successors && 1 == bi->numTargets))
+				(mark_successors && 1 == bi->numTargets) || 1 == bi->numTargets) // FIXME: assert convert single target
             {
                 rob.nonblocking = true;  
                 lastNonBlockingPhysReg = physreg;   

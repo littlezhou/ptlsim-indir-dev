@@ -15,12 +15,12 @@
 static VPCPredictorUpdate indirs[OutOfOrderModel::ROB_SIZE][MAX_VPC_ITERS]; 
                 
 
-static const W64 vpc_constants[32]={
+static const W64 vpc_constants[64]={
 	0x71e05c389a3c,
 	0xac20af7ee7ca,  
 	0x4c9d0bfadfe9,
 	0x9c5a00ad011d,
-    0x561f4945163a,
+        0x561f4945163a,
 	0xc1540b4c0803, 
 	0x17f1b69c5652,
 	0xb20fff87ef51,
@@ -47,7 +47,39 @@ static const W64 vpc_constants[32]={
 	0x52a09db15a9e,
 	0x771283ce886d,
 	0x2ca25a46381b,
-	0xdfaec966b5d7 	
+	0xdfaec966b5d7, 	
+       0x3e601e4c4d09,
+0x5b85da34dfe4,
+0x0c8664774cdf,
+0xfcf6fda2eb79,
+0x74f004ebd9dd,
+0x1a32e6aec476,
+0xfbb271a97647,
+0x63c1570d583e,
+0x6f989a56a0ce,
+0x4f351edaa2dc,
+0xeb1b7c6a2b8f,
+0x27e61f1959fd,
+0x2b5a5f6429fb,
+0xae329809f767,
+0x965ceab2aceb,
+0x3b7be5a00dd8,
+0xf3fe3cfe1d2a,
+0x10a72a900a07,
+0xcaa2bc44b98c,
+0x4e221972fd66,
+0xad35314a210b,
+0x4fb7cafb67d1,
+0x95e5e4bd0cab,
+0xf039f718a491,
+0x26b91d7746b5,
+0x4f32e3c3ff82,
+0x3bd3c98b202f,
+0xdc4bfc67717f,
+0xf9e266aa46d8,
+0x2b2132ebd18d,
+0x5ff73226a8b4,
+0xd3ffd165ccf1
 };  
     
 template <int SIZE>
@@ -685,7 +717,7 @@ W64 predict_indir(PredictorUpdate& update, W64 branchaddr, W64 target)
 
 // template <int METASIZE, int BIMODSIZE, int L1SIZE, int L2SIZE, int SHIFTWIDTH, bool HISTORYXOR, int BTBSETS, int BTBWAYS, int RASSIZE>
 // G-share constraints: METASIZE, BIMODSIZE, 1, L2SIZE, log2(L2SIZE), (HISTORYXOR = true), BTBSETS, BTBWAYS, RASSIZE
-struct BranchPredictorImplementation: public CombinedPredictor<2*65536, 2*65536, 1, 2*65536, 16+1, 1, 4096*2, 16*2, 1024> { };
+struct BranchPredictorImplementation: public CombinedPredictor<4096*65536, 4096*65536, 1, 4096*65536, 16+12, 1, 4096*8, 16*8, 1024> { };
 
 void BranchPredictorInterface::destroy() {
   if (impl) delete impl;
