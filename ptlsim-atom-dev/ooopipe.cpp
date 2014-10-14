@@ -975,6 +975,23 @@ void record_producers_with_exclude_bounded(ReorderBufferEntry& rob,W16s fIdx,Exc
 		          
 	}
 }
+     
+void simple_mark_all_producers(ReorderBufferEntry& rob)
+{
+	foreach (i, MAX_OPERANDS) 
+    {  
+    	if(rob.operands[i] && rob.operands[i]->rob && !rob.operands[i]->rob->nonblocking)
+        {    
+		   
+				
+			rob.operands[i]->rob->nonblocking = true;
+			if unlikely (config.event_log_enabled) {  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,rob.operands[i]->rob); }       	   
+            simple_mark_all_producers(*rob.operands[i]->rob);
+		   	   
+		 	
+        }
+    }
+}
 
 void record_producers_with_exclude(ReorderBufferEntry& rob,W16s fIdx,ExcludeRobFunc* funcs, int numFuncs,ReorderBufferEntry** robs,int& numMarked,bool& foundLoad, W16s& loadIdx)
 {
@@ -1100,10 +1117,11 @@ void mark_store_producers_this_block(W16s fIdx, ReorderBufferEntry& rob)
 
      
 
-void simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
+int simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
 {
     W16s idx = rob.idx;     
-    W64 rip = rob.uop.rip.rip; 
+    W64 rip = rob.uop.rip.rip;    
+	int numFound=0;
     ExcludeRobFunc funcs[]={is_rsp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store};  
     int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);    
 	bool foundLoad = false;
@@ -1111,7 +1129,8 @@ void simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
     {                       
        
         ReorderBufferEntry& rrob = rob.getthread().ROB[idx];  
-		foundLoad |= isload(rrob.uop.opcode);
+		foundLoad |= isload(rrob.uop.opcode);   
+		if(isload(rrob.uop.opcode)) { ++numFound;}
         if(rrob.uop.rip.rip != rip) {  break; }   
         if(!should_exclude_rob(rrob,funcs,nFuncs))
         {     
@@ -1122,7 +1141,7 @@ void simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
         --idx;
         if(idx < 0) { idx = ROB_SIZE-1;}  
     } while(idx != fIdx);
-
+	return numFound;
 }
     
 
@@ -1352,7 +1371,12 @@ void ThreadContext::rename() {
                     storeLen = childLen = arrLen = 0;
                 if logable(99) {  logfile << "before find_previous_block", endl;         }
                 // W16s endIdx = find_previous_block(rob.idx,rob,robIds);        
-                simple_mark_all_indir_jmp_uops(rob.idx,rob);
+                int numFound = simple_mark_all_indir_jmp_uops(rob.idx,rob);     
+				if(!numFound)
+				{
+					// unable to find loads; look back
+					simple_mark_all_producers(rob);
+				}
                 assert(inrange(arrLen,0,256));
                 if logable(99) {  logfile << "before mark_producers_one_block", endl;         }
                 robNonBlockingJmpIdx = rob.idx;
