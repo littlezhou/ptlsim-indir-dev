@@ -976,7 +976,7 @@ void record_producers_with_exclude_bounded(ReorderBufferEntry& rob,W16s fIdx,Exc
 	}
 }
      
-void simple_mark_all_producers(ReorderBufferEntry& rob)
+void simple_mark_all_producers(ReorderBufferEntry& rob, int& numFound,int& numLoadsFound)
 {
 	foreach (i, MAX_OPERANDS) 
     {  
@@ -984,9 +984,11 @@ void simple_mark_all_producers(ReorderBufferEntry& rob)
         {    
 		   
 				
-			rob.operands[i]->rob->nonblocking = true;
+			rob.operands[i]->rob->nonblocking = true;  
+			if(isload(rob.operands[i]->rob->uop.opcode)) { ++numLoadsFound;}  
+			++numFound;
 			if unlikely (config.event_log_enabled) {  rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,rob.operands[i]->rob); }       	   
-            simple_mark_all_producers(*rob.operands[i]->rob);
+            simple_mark_all_producers(*rob.operands[i]->rob,numFound,numLoadsFound);
 		   	   
 		 	
         }
@@ -1117,7 +1119,7 @@ void mark_store_producers_this_block(W16s fIdx, ReorderBufferEntry& rob)
 
      
 
-int simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
+int simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob,int& lastRob, ReorderBufferEntry* loadRobs[128])
 {
     W16s idx = rob.idx;     
     W64 rip = rob.uop.rip.rip;    
@@ -1130,7 +1132,7 @@ int simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
        
         ReorderBufferEntry& rrob = rob.getthread().ROB[idx];  
 		foundLoad |= isload(rrob.uop.opcode);   
-		if(isload(rrob.uop.opcode)) { ++numFound;}
+		if(isload(rrob.uop.opcode)) { loadRobs[numFound++] = &rob.getthread().ROB[idx];}
         if(rrob.uop.rip.rip != rip) {  break; }   
         if(!should_exclude_rob(rrob,funcs,nFuncs))
         {     
@@ -1140,7 +1142,8 @@ int simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob)
         
         --idx;
         if(idx < 0) { idx = ROB_SIZE-1;}  
-    } while(idx != fIdx);
+    } while(idx != fIdx);  
+	lastRob = idx;
 	return numFound;
 }
     
@@ -1370,12 +1373,27 @@ void ThreadContext::rename() {
                 memset(containsSet,false,sizeof(bool)*ROB_SIZE);
                     storeLen = childLen = arrLen = 0;
                 if logable(99) {  logfile << "before find_previous_block", endl;         }
-                // W16s endIdx = find_previous_block(rob.idx,rob,robIds);        
-                int numFound = simple_mark_all_indir_jmp_uops(rob.idx,rob);     
+                // W16s endIdx = find_previous_block(rob.idx,rob,robIds); 
+				int lastRob;                                                     
+				ReorderBufferEntry* loadRobs[128];        
+				
+                int numFound = simple_mark_all_indir_jmp_uops(rob.idx,rob,lastRob,loadRobs);     
 				if(!numFound)
 				{
 					// unable to find loads; look back
-					simple_mark_all_producers(rob);
+					int n0,n1;
+					simple_mark_all_producers(rob,n0,n1);
+				}  
+				else
+				{
+					// try to find the backward slices for the loads
+					for(int i=0;i<numFound;++i)
+					{   
+						int nFound = 0;
+						int nLoadFound = 0;
+						simple_mark_all_producers(*loadRobs[i],nFound,nLoadFound);
+						if(nFound && nLoadFound) { loadRobs[i]->nonblocking = true; }
+					}
 				}
                 assert(inrange(arrLen,0,256));
                 if logable(99) {  logfile << "before mark_producers_one_block", endl;         }
