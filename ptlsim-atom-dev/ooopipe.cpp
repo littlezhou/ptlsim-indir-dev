@@ -750,6 +750,26 @@ bool is_rsp_manipulation(ReorderBufferEntry& rob)
     }                   
     return retVal;
 }                          
+  
+bool is_rbp_manipulation(ReorderBufferEntry& rob)
+{      
+    bool retVal = false; 
+    if(isclass(rob.uop.opcode,OPCLASS_ADDSUB) || isclass(rob.uop.opcode,OPCLASS_STORE))
+    {   
+        bool found_rbp = false;
+        foreach (i, MAX_OPERANDS) 
+        { 
+            if(rob.operands[i] && rob.operands[i]->archreg == REG_rbp)
+            {
+                    found_rbp = true;
+                    break;
+            }
+                                                         
+        }   
+        return found_rbp;
+    }                   
+    return retVal;
+}                          
 
 
 bool trace_reg_is_operand(ReorderBufferEntry& rob)       
@@ -1076,7 +1096,31 @@ void mark_producers_one_block(ReorderBufferEntry& rob,W16s fIdx, Hashtable<W64,b
         }
     } 
 }
-   
+             
+
+bool is_simple_load_store(ReorderBufferEntry& rob)
+{
+	foreach (i, MAX_OPERANDS) 
+    { 
+        if(rob.operands[i] && rob.operands[i]->rob) 
+        {
+	    	if(isload(rob.operands[i]->rob->uop.opcode))
+	        {
+				return true;
+			}
+		}
+	}  
+	return false;
+}
+      
+bool is_first_push(ReorderBufferEntry& rob)
+{
+	W16s idx = rob.idx - 1;
+	if(idx < 0) { idx = ROB_SIZE-1;}          
+	ReorderBufferEntry& rrob = rob.getthread().ROB[idx];
+	return isclass(rrob.uop.opcode, OPCLASS_INDIR_BRANCH);
+}
+
 // mark the ancestors of the store provided that they are confined to the current basic block
 void mark_store_producers_this_block(W16s fIdx, ReorderBufferEntry& rob)
 {            
@@ -1500,17 +1544,31 @@ void ThreadContext::rename() {
             else
             {
                 assert(lastNonBlockingPhysReg);
-                ExcludeRobFunc funcs[]={is_rsp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store,is_opclass_mov};  
+                ExcludeRobFunc funcs[]={is_rsp_manipulation,is_rbp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store,is_opclass_mov};  
                 int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);
                 if(!foundNextCondBranch)
 				{	
 					if(should_exclude_rob(rob,funcs,nFuncs))
                 	{        
-                    	rob.nb_successor = true;       
+                    	rob.nb_successor = true; 
+					   // rob.nonblocking = true;
                     	if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob); }     
                       
-                    }                      
-                }
+                    } 
+                    #if 1
+                    if(is_rsp_manipulation(rob))
+ 					{ 
+						rob.nonblocking = true; 
+						if unlikely (config.event_log_enabled) { rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_RSP,&rob);  }
+					} 
+					if(is_rob_store(rob) && !is_first_push(rob) && is_simple_load_store(rob)) 
+					{ 
+						rob.nonblocking = true; 
+					    if unlikely (config.event_log_enabled)  { rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob);  }
+				    }    
+					
+                	#endif
+				}
 				else
 				{                     
 					bool found = false;      
