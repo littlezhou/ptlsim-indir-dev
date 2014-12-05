@@ -1119,6 +1119,24 @@ bool is_first_push(ReorderBufferEntry& rob)
 	if(idx < 0) { idx = ROB_SIZE-1;}          
 	ReorderBufferEntry& rrob = rob.getthread().ROB[idx];
 	return isclass(rrob.uop.opcode, OPCLASS_INDIR_BRANCH);
+}         
+  
+bool find_idx_of_indir_jmp(ReorderBufferEntry& rob, W16s& foundIdx)
+{                           
+	W16s idx = rob.idx - 1;
+	if(idx < 0) { idx = ROB_SIZE-1;}
+	while(idx != rob.idx)
+	{
+	  	ReorderBufferEntry& rrob = rob.getthread().ROB[idx];  
+		if(isclass(rrob.uop.opcode, OPCLASS_INDIR_BRANCH) && rrob.nonblocking)
+		{
+			foundIdx = idx;
+			return true;
+		}
+		--idx;
+		if(idx < 0) { idx = ROB_SIZE-1;}     
+	} 
+	return false;
 }
 
 // mark the ancestors of the store provided that they are confined to the current basic block
@@ -1550,12 +1568,31 @@ void ThreadContext::rename() {
 				{	
 					if(should_exclude_rob(rob,funcs,nFuncs))
                 	{        
-                    	rob.nb_successor = true; 
-					   // rob.nonblocking = true;
+                    	rob.nb_successor = true;   
+						rob.nonblocking = true;
+						#if 0
+						W16s foundIdx;
+						
+						if(find_idx_of_indir_jmp(rob,foundIdx))
+						{                    
+							ReorderBufferEntry& rrob = rob.getthread().ROB[foundIdx];
+						   	foreach (i, MAX_OPERANDS) 
+					        {
+								if(rob.operands[i]->index() == PHYS_REG_NULL)
+								{                              
+									rob.operands[i] = rrob.physreg;
+									rob.operands[i]->addref(rob, threadid);       
+								 	rob.nonblocking = true;  
+									break;
+								}
+							}
+						   
+						}
+					    #endif
                     	if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob); }     
                       
                     } 
-                    #if 1
+                    #if 0
                     if(is_rsp_manipulation(rob))
  					{ 
 						rob.nonblocking = true; 

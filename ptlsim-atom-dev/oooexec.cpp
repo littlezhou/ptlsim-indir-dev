@@ -2067,7 +2067,7 @@ int OutOfOrderCore::issue(int cluster) {
 		else 
 		{
              if unlikely (config.event_log_enabled){ getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_READY,&rob);} 
-			 if(isload(rob.uop.opcode))
+			 if(isload(rob.uop.opcode) || rob.nb_successor)
 			 {
 				canSkip = true;
 			 }   
