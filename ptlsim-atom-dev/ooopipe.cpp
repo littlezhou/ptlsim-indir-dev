@@ -1561,12 +1561,17 @@ void ThreadContext::rename() {
 						rob.nonblocking = true; 
 						if unlikely (config.event_log_enabled) { rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_RSP,&rob);  }
 					} 
-					if(is_rob_store(rob) && !is_first_push(rob) && is_simple_load_store(rob)) 
+					if(is_rob_store(rob) && is_simple_load_store(rob)) 
 					{ 
 						rob.nonblocking = true; 
 					    if unlikely (config.event_log_enabled)  { rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR,&rob);  }
 				    }    
+					if(is_rob_store(rob) && is_first_push(rob)) 
+					{ 
 					
+				 		rob.nonblocking = false; 
+				 		if unlikely (config.event_log_enabled)  { rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_SUCCESSOR_UNMARK,&rob);  } 
+					}
                 	#endif
 				}
 				else
