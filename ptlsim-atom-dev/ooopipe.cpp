@@ -1179,15 +1179,68 @@ void mark_store_producers_this_block(W16s fIdx, ReorderBufferEntry& rob)
 }
      
 
-     
+           
+void simple_mark_all_ancestors(ReorderBufferEntry& rob, int startRob,ReorderBufferEntry* deps[512],int numDeps)
+{
+  
+	W16s idx = startRob;
+	do
+	{
+		ReorderBufferEntry& rrob = rob.getthread().ROB[idx];   
+		for(int i=0; i < numDeps; ++i )
+		{
+		   	if(deps[i] == &rob.getthread().ROB[idx])
+			{
+				rrob.nonblocking = true;    
+				if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_ANCESTOR,&rrob); }        
+				int k=idx;        
+				// don't do transitivity on the forward slice for now
+				while(k != startRob)
+				{      
+					ReorderBufferEntry& crob = rob.getthread().ROB[k];                                      
+					foreach(j, MAX_OPERANDS)
+					{
+				   		if(crob.operands[j] && crob.operands[j]->rob)
+					    {
+							if(crob.operands[j]->rob->idx == idx)
+							{
+								crob.nonblocking = true;   
+								if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_ANCESTOR_DESC,&crob); }           
+								break;
+							}
+						}          
+					}
+					++k;
+					if(k >= ROB_SIZE) { k = 0;}
+				}
+				foreach(j, MAX_OPERANDS)
+				{
+			   		if(rrob.operands[j] && rrob.operands[j]->rob)
+				    {
+						deps[numDeps++] = rrob.operands[j]->rob;
+					}          
+				}   
+				break;
+			}  
+			
+		}
+	   	
+	 	--idx;
+	  	if(idx < 0) { idx = ROB_SIZE-1;}  
+	} while(idx != rob.idx);
+	
+}
 
-int simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob,int& lastRob, ReorderBufferEntry* loadRobs[128])
+
+int simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob,int& lastRob,ReorderBufferEntry* loadRobs[512], ReorderBufferEntry* deps[512],int& numDeps)
 {
     W16s idx = rob.idx;     
     W64 rip = rob.uop.rip.rip;    
 	int numFound=0;
-    ExcludeRobFunc funcs[]={is_rsp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store};  
-    int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);    
+    //ExcludeRobFunc funcs[]={is_rsp_manipulation,is_opclass_collcc,trace_reg_is_operand,is_rob_store};  
+	ExcludeRobFunc funcs[]={is_rsp_manipulation,trace_reg_is_operand,is_rob_store};            
+    int nFuncs = sizeof(funcs)/sizeof(ExcludeRobFunc);       
+	numDeps = 0;
 	bool foundLoad = false;
     do
     {                       
@@ -1196,6 +1249,15 @@ int simple_mark_all_indir_jmp_uops(W16s fIdx, ReorderBufferEntry& rob,int& lastR
 		foundLoad |= isload(rrob.uop.opcode);   
 		if(isload(rrob.uop.opcode)) { loadRobs[numFound++] = &rob.getthread().ROB[idx];}
         if(rrob.uop.rip.rip != rip) {  break; }   
+	   	foreach (i, MAX_OPERANDS) 
+        {   
+			if(rrob.operands[i] && rrob.operands[i]->rob)
+			{
+				deps[numDeps++] = rrob.operands[i]->rob;
+			}
+		}                                                  
+		
+
         if(!should_exclude_rob(rrob,funcs,nFuncs))
         {     
             if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING,&rrob); }                                  
@@ -1437,9 +1499,12 @@ void ThreadContext::rename() {
                 if logable(99) {  logfile << "before find_previous_block", endl;         }
                 // W16s endIdx = find_previous_block(rob.idx,rob,robIds); 
 				int lastRob;                                                     
-				ReorderBufferEntry* loadRobs[128];        
+				ReorderBufferEntry* loadRobs[512]; 
+				ReorderBufferEntry* depRobs[512];
+				int numDeps=0;
 				
-                int numFound = simple_mark_all_indir_jmp_uops(rob.idx,rob,lastRob,loadRobs);     
+                int numFound = simple_mark_all_indir_jmp_uops(rob.idx,rob,lastRob,loadRobs,depRobs,numDeps);    
+				simple_mark_all_ancestors(rob, lastRob, depRobs, numDeps);        
 				if(!numFound)
 				{
 					// unable to find loads; look back
