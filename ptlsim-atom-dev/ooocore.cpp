@@ -1268,6 +1268,12 @@ ostream& OutOfOrderCoreEvent::print(ostream& os) const {
     }
     break;
   }
+  case EVENT_FOUND_INDIR_CALL:
+    os <<  "found-indir-call ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24), " should_be_nonblocking: ", predinfo.is_nonblocking;
+  break;
+  case EVENT_FOUND_INDIR_RETURN:
+    os <<  "found-indir-return ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24),  " should_be_nonblocking: ", predinfo.is_nonblocking;
+  break;
   case EVENT_FRONTEND:
     os <<  "front  rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24) , " nonblocking: ", nonblocking, " frontend stage ", (FRONTEND_STAGES - frontend.cycles_left), " of ", FRONTEND_STAGES;
     break;
@@ -1279,6 +1285,9 @@ ostream& OutOfOrderCoreEvent::print(ostream& os) const {
   break;
   case EVENT_MARK_NONBLOCKING_BIAS_COND_BRANCH:
      os << "nonblocking-mark-cond-bias-branch rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24), " nonblocking: ", nonblocking;
+  break;
+  case EVENT_FOUND_NONBLOCKING_RETURN:
+     os << "found-nonblocking-return rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24), " nonblocking: ", nonblocking; 
   break;
   case  EVENT_FOUND_NONBLOCKING_ANCESTOR:
      os << "found-nonblocking-ancestor  rob ", intstring(rob, -3), "(",padstring(uopname,-5),")", " rip: 0x", hexstring(rip.rip, 24), " nonblocking: ", nonblocking;

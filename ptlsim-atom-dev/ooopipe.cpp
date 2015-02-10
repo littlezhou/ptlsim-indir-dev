@@ -582,7 +582,8 @@ bool ThreadContext::fetch() {
 
     transop.rip = fetchrip;
     transop.uuid = fetch_uuid++;
-
+    bool should_be_nonblocking=false;
+    transop.predinfo.is_nonblocking = false;         
     if (isbranch(transop.opcode)) {
       transop.predinfo.uuid = transop.uuid;
       transop.predinfo.bptype =
@@ -592,6 +593,7 @@ bool ThreadContext::fetch() {
         (bit(transop.extshift, log2(BRANCH_HINT_POP_RAS)) << log2(BRANCH_HINT_RET));
 
       // SMP/SMT: Fill in with target thread ID (if the predictor supports this):
+     
       transop.predinfo.ctxid = 0;
       transop.predinfo.ripafter = fetchrip + transop.bytes;
       predrip = branchpred.predict(transop.predinfo, transop.predinfo.bptype, transop.predinfo.ripafter, transop.riptaken);
@@ -628,10 +630,32 @@ bool ThreadContext::fetch() {
     if likely (transop.eom) {
       fetchrip.rip += transop.bytes;
       fetchrip.update(ctx);
-
+      // indirect calls 
+	  if(isclass(transop.opcode, OPCLASS_INDIR_BRANCH) && transop.extshift == BRANCH_HINT_PUSH_RAS)
+      {
+        BranchInfo** binfo =
+        branchHash.get(transop.rip.rip);
+        if(null != binfo)
+        {
+            BranchInfo* bi = *binfo;     
+			should_be_nonblocking = bi->isIndirect && bi->wasMarkedNonBlocking;  
+			transop.predinfo.is_nonblocking = should_be_nonblocking;  
+        	if unlikely (config.event_log_enabled) { getcore().eventlog.add(EVENT_FOUND_INDIR_CALL,transop); }    
+            
+		} 
+	   
+		transop.predinfo.is_nonblocking = should_be_nonblocking;
+      }  
+	  transop.predinfo.ras_old.is_nonblocking = false;         
       if unlikely (isbranch(transop.opcode) && (transop.predinfo.bptype & (BRANCH_HINT_CALL|BRANCH_HINT_RET)))
                     branchpred.updateras(transop.predinfo, transop.predinfo.ripafter);
-
+      
+      if(isclass(transop.opcode, OPCLASS_INDIR_BRANCH) && transop.extshift == BRANCH_HINT_POP_RAS)  
+      {        
+	  
+	  	transop.predinfo.is_nonblocking = transop.predinfo.ras_old.is_nonblocking;   
+		if unlikely (config.event_log_enabled) { getcore().eventlog.add(EVENT_FOUND_INDIR_RETURN,transop); }       
+      }
       if unlikely (redirectrip) {
         // follow to target, then end fetching for this cycle if predicted taken
         bool taken = (predrip != fetchrip);
@@ -1466,6 +1490,7 @@ void ThreadContext::rename() {
         if(null != binfo)
         {
             BranchInfo* bi = *binfo;  
+            bi->isIndirect = true;
             W64 cPredCurr = bi->pred_taken_and_taken +  bi->pred_not_taken_and_not_taken;
             W64 mPredCurr = (bi->pred_taken_and_not_taken + bi->pred_not_taken_and_taken);
             W64 branchCount = bi->totalTaken;
@@ -1477,6 +1502,7 @@ void ThreadContext::rename() {
 				(mark_successors && 1 == bi->numTargets) || 1 == bi->numTargets) // FIXME: assert convert single target
             {
                 rob.nonblocking = true;  
+                bi->wasMarkedNonBlocking = true;
                 lastNonBlockingPhysReg = physreg;   
                 rob.nb_jmp = true;
                  //logfile << "marking initial producers: ", rob.idx, endl;
@@ -1745,8 +1771,12 @@ void ThreadContext::rename() {
                 }
             } 
             #endif
-      }
-   
+     }
+     if(isclass(rob.uop.opcode, OPCLASS_INDIR_BRANCH) && (rob.uop.extshift == BRANCH_HINT_POP_RAS) && transop.predinfo.is_nonblocking)
+     {
+		rob.nonblocking = true;       
+		if unlikely (config.event_log_enabled){ rob.getcore().eventlog.add(EVENT_FOUND_NONBLOCKING_RETURN,&rob); } 
+	 }
 
     //
     // Logging

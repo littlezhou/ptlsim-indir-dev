@@ -26,6 +26,7 @@ struct ReturnAddressStackEntry {
   int idx;
   W32 uuid;
   W64 rip;
+  bool is_nonblocking;
   operator W64() const { return rip; }
 
   ReturnAddressStackEntry() { }
@@ -33,6 +34,7 @@ struct ReturnAddressStackEntry {
     this->uuid = uuid;
     this->rip = rip;
     this->idx = -1;
+    this->is_nonblocking = false;
   }
 
   // Required by Queue<> template class:
@@ -63,6 +65,7 @@ struct PredictorUpdate {
   byte* cpmeta;
   // predicted directions:
   W32 ctxid:8, flags:8, bimodal:1, twolevel:1, meta:1, ras_push:1;
+  bool is_nonblocking;
   ReturnAddressStackEntry ras_old;  
  
 };

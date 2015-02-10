@@ -126,8 +126,8 @@ ostream& operator <<(ostream& os, const ReturnAddressStackEntry& e) {
 template <int SIZE>
 struct ReturnAddressStack: public Queue<ReturnAddressStackEntry, SIZE> {
   typedef Queue<ReturnAddressStackEntry, SIZE> base_t;
-
-  void push(W64 uuid, W64 rip, ReturnAddressStackEntry& old) {
+  
+  void push(W64 uuid, W64 rip, ReturnAddressStackEntry& old, bool is_nonblocking) {
 #ifdef DEBUG_RAS
     if (logable(5)) logfile << "ReturnAddressStack::push(uuid ", uuid, ", rip ", (void*)(Waddr)rip, "):", endl;
 #endif
@@ -147,7 +147,7 @@ struct ReturnAddressStack: public Queue<ReturnAddressStackEntry, SIZE> {
 
     e.uuid = uuid;
     e.rip = rip;
-
+    e.is_nonblocking = is_nonblocking; 
     stats.ooocore.branchpred.ras.pushes++;
 #ifdef DEBUG_RAS
     if (logable(5)) { logfile << *this; }
@@ -164,6 +164,7 @@ struct ReturnAddressStack: public Queue<ReturnAddressStackEntry, SIZE> {
       old.idx = -1;
       old.uuid = 0;
       old.rip = 0;
+      old.is_nonblocking = false;
       return old;
     }
 
@@ -194,7 +195,18 @@ struct ReturnAddressStack: public Queue<ReturnAddressStackEntry, SIZE> {
 
     return base_t::peektail()->rip;
   }
+  ReturnAddressStackEntry* peekentry()
+  {
+     if(!base_t::empty())
+     {
+       return base_t::peektail();
 
+     }
+     else
+     {
+        return null; 
+     } 
+  }
   //
   // Pop a speculative push from the stack
   //
@@ -213,7 +225,7 @@ struct ReturnAddressStack: public Queue<ReturnAddressStackEntry, SIZE> {
     ReturnAddressStackEntry& e =* base_t::peektail();
     e.uuid = old.uuid;
     e.rip = old.rip;
-
+    e.is_nonblocking = old.is_nonblocking;
     ReturnAddressStackEntry dummy;
     pop(dummy);
 #ifdef DEBUG_RAS
@@ -244,7 +256,7 @@ struct ReturnAddressStack: public Queue<ReturnAddressStackEntry, SIZE> {
     if (logable(5)) logfile << "  Pushed speculative pop; old.index = ", old.index(), " vs tail ", base_t::tail, endl;
     assert(old.index() == base_t::tail);
 #endif
-    push(old.uuid, old.rip, dummy);
+    push(old.uuid, old.rip, dummy, old.is_nonblocking);
     stats.ooocore.branchpred.ras.annuls++;
   }
 };
@@ -280,7 +292,7 @@ struct CombinedPredictor {
       ras.pop(predinfo.ras_old);
     } else if likely (predinfo.flags & BRANCH_HINT_CALL) {
       predinfo.ras_push = 1;
-      ras.push(predinfo.uuid, rip, predinfo.ras_old);
+      ras.push(predinfo.uuid, rip, predinfo.ras_old, predinfo.is_nonblocking);
     }
   }
 

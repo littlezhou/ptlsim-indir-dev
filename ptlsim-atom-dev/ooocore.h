@@ -1125,6 +1125,10 @@ namespace OutOfOrderModel {
     EVENT_MARK_NONBLOCKING_COND_BRANCH,
     EVENT_FOUND_NONBLOCKING_INDIR_ASSERT, 
     EVENT_MARK_NONBLOCKING_BIAS_COND_BRANCH,
+    EVENT_FOUND_NONBLOCKING_RETURN,
+    EVENT_FOUND_INDIR_CALL,
+    EVENT_FOUND_INDIR_RETURN
+
   };
 
   //
@@ -1149,8 +1153,10 @@ namespace OutOfOrderModel {
     byte fu;
     W8 threadid;
     W32 issueq_count;
+    BranchPredictorUpdateInfo predinfo; 
     bool nonblocking;
-
+       
+ 
     OutOfOrderCoreEvent* fill(int type) {
       this->type = type;
       cycle = sim_cycle;
@@ -1165,6 +1171,7 @@ namespace OutOfOrderModel {
       rip = uop.rip;
       threadid = uop.threadid;
       this->uop = uop;
+      this->predinfo = uop.predinfo;
       return this;
     }
 
